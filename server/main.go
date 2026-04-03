@@ -16,15 +16,6 @@ type Message struct {
 	Text string `json:"text"`
 }
 
-// helloHandler est une route de test pour ton client React
-func helloHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*") 
-	w.Header().Set("Content-Type", "application/json")
-
-	msg := Message{Text: "Bonjour depuis le serveur Go de Footix !"}
-	json.NewEncoder(w).Encode(msg)
-}
-
 func printCounter(c int) {
 	fmt.Printf("Compteur : %d\n", c)
 	time.Sleep(20*time.Second)
@@ -101,12 +92,12 @@ func main() {
 		fmt.Fprintf(w, "Le serveur Go répond bien !\n")
 	})
 	
-	http.HandleFunc("/api/hello", helloHandler)
+	// Enregistrement de toutes les autres routes de l'API
+	RegisterRoutes(db)
 
 	// Lancement du serveur (Bloquant)
 	fmt.Println("Serveur prêt sur http://localhost:8080")
-	err = http.ListenAndServe(":8080", nil)
-	if err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
 }

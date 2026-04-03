@@ -115,42 +115,6 @@ func FetchAndSaveMatches(db *sql.DB, token string, leagueCode string, season int
 	return nil
 }
 
-// InitialPopulate coordonne le remplissage global de la base de données.
-// Elle gère les contraintes de "Rate Limit" imposées par le plan gratuit de l'API.
-/*func InitialPopulate(db *sql.DB, token string, jobs chan storage.Job, endedJobs chan int, completionSignal chan int) {
-	fmt.Println("Initialisation de la base de données via l'API externe...")
-	for {
-
-		select {
-		case job := <-jobs:
-			// Enregistrement de la compétition parente
-			FetchAndSaveLeague(db, token, job.LeagueCode)
-			// Respect du quota : Le plan gratuit autorise 10 requêtes par minute (soit 1 requête toutes les 6 secondes).
-			time.Sleep(6 * time.Second)
-
-			// Importation séquentielle d'une saison pour les statistiques de prédiction
-			err := FetchAndSaveMatches(db, token, job.LeagueCode, job.Season)
-			if err != nil {
-				fmt.Printf("Échec de l'import pour la saison %d: de la ligue : %s %v\n", job.Season, job.LeagueCode, err)
-			}
-			fmt.Println("Alimentation terminée pour la ligue :", job.LeagueCode)
-
-			status := "Success"
-			if err != nil {
-				status = "Failed"
-			}
-
-			job.Response <- storage.Result{SeagueCode: job.LeagueCode, Season: job.Season, Status: status}
-			endedJobs <- 1 // Signal que ce job est terminé
-
-			// Pause obligatoire entre chaque saison pour éviter le blocage de l'IP par l'API
-			time.Sleep(6 * time.Second)
-		case <-completionSignal:
-			break
-		}
-
-	}
-}*/
 
 /*
 	Là le serveur va tourner en permanence et on gros chaque 10 minutes on
