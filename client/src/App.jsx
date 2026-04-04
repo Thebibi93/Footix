@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./contexts/AuthContext";
 import Navbar from "./components/Navbar";
 import Leagues from "./components/Leagues";
@@ -7,6 +7,7 @@ import MatchDetail from "./components/MatchDetail";
 import Login from "./components/auth/Login";
 import Signup from "./components/auth/Signup";
 import Profile from "./components/Profile";
+import Breadcrumb from "./components/Breadcrumb";
 
 function Home() {
   return (
@@ -25,14 +26,22 @@ function Home() {
 }
 
 function App() {
+  const location = useLocation();
+
   return (
     <AuthProvider>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
         <Navbar />
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <Breadcrumb />
+        </div>
         <main className="max-w-7xl mx-auto px-4 py-8">
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/league/:leagueId" element={<MatchList />} />
+            <Route
+              path="/league/:leagueId"
+              element={<MatchList key={location.pathname} />}
+            />
             <Route path="/match/:matchId" element={<MatchDetail />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />

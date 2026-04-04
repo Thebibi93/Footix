@@ -11,7 +11,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-gray-900 text-white p-4 shadow-md">
+    <nav className="bg-gray-900 text-white p-4 shadow-md sticky top-0 z-10">
       <div className="max-w-7xl mx-auto flex justify-between items-center">
         <Link to="/" className="text-2xl font-bold text-blue-400">
           Footix

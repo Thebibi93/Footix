@@ -22,7 +22,7 @@ export default function Leagues() {
           className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition transform hover:-translate-y-1"
         >
           <h3 className="text-xl font-bold text-gray-800">{league.name}</h3>
-          <p className="text-gray-500">{league.country}</p>
+          <p className="text-gray-500">{league.code}</p>
         </Link>
       ))}
     </div>

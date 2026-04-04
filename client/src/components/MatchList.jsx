@@ -8,10 +8,16 @@ export default function MatchList() {
   const { getMatchesByLeague, loading } = useSimulatedApi();
 
   useEffect(() => {
+    let isMounted = true;
     if (leagueId) {
-      getMatchesByLeague(leagueId).then(setMatches);
+      getMatchesByLeague(leagueId).then((data) => {
+        if (isMounted) setMatches(data);
+      });
     }
-  }, [leagueId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [leagueId, getMatchesByLeague]);
 
   if (loading)
     return <div className="text-center py-10">Chargement des matchs...</div>;

@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
     if (!email.includes("@")) {
       throw new Error("Invalid credentials");
     }
-    const newUser = { id: Date.now(), email, name: email.split("@")[0] };
+    const newUser = { id: 1, email, name: email.split("@")[0] };
     setUser(newUser);
     localStorage.setItem("footix_user", JSON.stringify(newUser));
     return newUser;
