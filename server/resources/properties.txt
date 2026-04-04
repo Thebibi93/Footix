@@ -1,5 +1,0 @@
-db_name=idrisdatabase
-db_user=ai222829
-db_password=Idris2023#
-db_host=localhost
-token=c9850c98760046ecaddc8262f26c96e3
