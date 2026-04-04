@@ -31,3 +31,5 @@ go.work.sum
 # .idea/
 # .vscode/
 server/resources/properties.txt
+.idea/
+.vscode/
