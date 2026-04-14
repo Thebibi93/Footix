@@ -1,19 +1,18 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 )
 
 // GetLeagueIDByCode récupère l'ID numérique d'une ligue à partir de son code mnémonique (ex: 'FL1').
-// Cela permet d'assurer l'intégrité référentielle sans coder l'ID en dur.
 func GetLeagueIDByCode(db *sql.DB, leagueCode string) (int, error) {
 	var id int
 	query := `SELECT id FROM Leagues WHERE code = $1`
-
-	// On utilise QueryRow car on attend un résultat unique
 	err := db.QueryRow(query, leagueCode).Scan(&id)
 	if err != nil {
 		return 0, fmt.Errorf("ligue introuvable pour le code %s : %v", leagueCode, err)
@@ -21,25 +20,89 @@ func GetLeagueIDByCode(db *sql.DB, leagueCode string) (int, error) {
 	return id, nil
 }
 
-
-func GetProfileByID(db *sql.DB, userID int) (PublicUser, error) {
-	var user PublicUser
-	err := db.QueryRow(`SELECT id, username, email FROM Users WHERE id = $1`, userID).
-		Scan(&user.ID, &user.Username, &user.Email)
+func getUserRank(db *sql.DB, userID int) (int, error) {
+	var rank int
+	err := db.QueryRow(`
+        SELECT ranked.rank
+        FROM (
+            SELECT u.id,
+                   RANK() OVER (ORDER BY COALESCE(s.score, 0) DESC, u.username ASC) AS rank
+            FROM Users u
+            LEFT JOIN UserScores s ON s.user_id = u.id
+        ) ranked
+        WHERE ranked.id = $1`, userID).Scan(&rank)
 	if err != nil {
-		return PublicUser{}, err
+		return 0, err
 	}
-	return user, nil
+	return rank, nil
 }
 
-func GetUserByID(db *sql.DB, userID int) (PublicUser, error) {
-	var user PublicUser
-	err := db.QueryRow(`SELECT id, username FROM Users WHERE id = $1`, userID).
-		Scan(&user.ID, &user.Username)
+func getUserProfileSummary(db *sql.DB, userID int, includeEmail bool) (UserProfileSummary, error) {
+	var profile UserProfileSummary
+	var email sql.NullString
+
+	err := db.QueryRow(`
+        SELECT
+            u.id,
+            u.username,
+            u.email,
+            COALESCE(s.score, 0) AS score,
+            COALESCE(pred.total_predictions, 0) AS total_predictions,
+            COALESCE(pred.correct_predictions, 0) AS correct_predictions,
+            COALESCE(chat.chat_messages, 0) AS chat_messages
+        FROM Users u
+        LEFT JOIN UserScores s ON s.user_id = u.id
+        LEFT JOIN (
+            SELECT
+                h.user_id,
+                COUNT(*)::INT AS total_predictions,
+                COUNT(*) FILTER (
+                    WHERE h.actual_result IS NOT NULL
+                      AND h.actual_result <> ''
+                      AND h.predicted_result = h.actual_result
+                )::INT AS correct_predictions
+            FROM UserPredictionHistory h
+            GROUP BY h.user_id
+        ) pred ON pred.user_id = u.id
+        LEFT JOIN (
+            SELECT user_id, COUNT(*)::INT AS chat_messages
+            FROM ChatMessages
+            GROUP BY user_id
+        ) chat ON chat.user_id = u.id
+        WHERE u.id = $1`, userID).Scan(
+		&profile.ID,
+		&profile.Username,
+		&email,
+		&profile.Score,
+		&profile.TotalPredictions,
+		&profile.CorrectPredictions,
+		&profile.ChatMessages,
+	)
 	if err != nil {
-		return PublicUser{}, err
+		return UserProfileSummary{}, err
 	}
-	return user, nil
+
+	if includeEmail && email.Valid {
+		profile.Email = email.String
+	}
+	if profile.TotalPredictions > 0 {
+		profile.Accuracy = float64(profile.CorrectPredictions) * 100 / float64(profile.TotalPredictions)
+	}
+
+	profile.Rank, err = getUserRank(db, userID)
+	if err != nil {
+		return UserProfileSummary{}, err
+	}
+
+	return profile, nil
+}
+
+func GetProfileByID(db *sql.DB, userID int) (UserProfileSummary, error) {
+	return getUserProfileSummary(db, userID, true)
+}
+
+func GetUserByID(db *sql.DB, userID int) (UserProfileSummary, error) {
+	return getUserProfileSummary(db, userID, false)
 }
 
 func ListUsers(db *sql.DB) ([]PublicUser, error) {
@@ -267,15 +330,17 @@ func ListScores(db *sql.DB) ([]ScoreEntry, error) {
 
 func SaveUserPrediction(db *sql.DB, userID int, matchID int, predictedResult string) error {
 	var status string
+	var kickoff time.Time
 	var homeScore, awayScore sql.NullInt64
-	err := db.QueryRow(`SELECT status, home_score, away_score FROM Matches WHERE id = $1`, matchID).
-		Scan(&status, &homeScore, &awayScore)
+	err := db.QueryRow(`SELECT status, utc_date, home_score, away_score FROM Matches WHERE id = $1`, matchID).
+		Scan(&status, &kickoff, &homeScore, &awayScore)
 	if err != nil {
 		return err
 	}
 
-	if status == "FINISHED" {
-		return errors.New("Impossible de prédire un match déjà terminé")
+	statusUpper := strings.ToUpper(strings.TrimSpace(status))
+	if statusUpper == "FINISHED" || kickoff.UTC().Before(time.Now().UTC()) {
+		return errors.New("Impossible de prédire un match déjà commencé ou terminé")
 	}
 
 	_, err = db.Exec(`
@@ -435,7 +500,9 @@ func ListChatMessagesByUserID(db *sql.DB, userID int64, limit int) ([]ChatMessag
 }
 
 func CreateChatMessageByMatchID(db *sql.DB, matchID int64, userID int, message string) (ChatMessage, error) {
-	tx, err := db.BeginTx(nil, &sql.TxOptions{Isolation: sql.LevelSerializable})
+	ctx := context.Background()
+
+	tx, err := db.BeginTx(ctx, &sql.TxOptions{Isolation: sql.LevelReadCommitted})
 	if err != nil {
 		return ChatMessage{}, err
 	}
@@ -445,7 +512,28 @@ func CreateChatMessageByMatchID(db *sql.DB, matchID int64, userID int, message s
 		}
 	}()
 
+	var matchStatus string
+	if err = tx.QueryRow(`SELECT status FROM Matches WHERE id = $1`, matchID).Scan(&matchStatus); err != nil {
+		return ChatMessage{}, err
+	}
+	if strings.EqualFold(strings.TrimSpace(matchStatus), "FINISHED") {
+		return ChatMessage{}, errors.New("chat fermé pour un match terminé")
+	}
+
+	var existingUserID int
+	if err = tx.QueryRow(`SELECT id FROM Users WHERE id = $1`, userID).Scan(&existingUserID); err != nil {
+		return ChatMessage{}, err
+	}
+
 	roomID, err := GetOrCreateMainChatRoomIDByMatchID(tx, matchID)
+	if err != nil {
+		return ChatMessage{}, err
+	}
+
+	_, err = tx.Exec(`
+        INSERT INTO ChatRoomCounters (chat_room_id, last_seq)
+        VALUES ($1, 0)
+        ON CONFLICT (chat_room_id) DO NOTHING`, roomID)
 	if err != nil {
 		return ChatMessage{}, err
 	}
@@ -463,6 +551,7 @@ func CreateChatMessageByMatchID(db *sql.DB, matchID int64, userID int, message s
 	var created ChatMessage
 	created.MatchID = matchID
 	created.RoomID = roomID
+	created.Message = message
 
 	err = tx.QueryRow(`
         INSERT INTO ChatMessages (chat_room_id, seq_in_room, user_id, message)
@@ -484,6 +573,5 @@ func CreateChatMessageByMatchID(db *sql.DB, matchID int64, userID int, message s
 		return ChatMessage{}, err
 	}
 
-	created.Message = message
 	return created, nil
 }

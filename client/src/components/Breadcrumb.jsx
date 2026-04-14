@@ -1,83 +1,94 @@
 import { useEffect, useState } from "react";
+import { Anchor, Breadcrumbs as MantineBreadcrumbs, Text } from "@mantine/core";
 import { Link, useLocation } from "react-router-dom";
 import { useSimulatedApi } from "../hooks/useSimulatedApi";
 
-// TODO : Cacher probablement les données pour un meilleur chargement
 export default function Breadcrumb() {
   const location = useLocation();
   const [breadcrumbs, setBreadcrumbs] = useState([]);
   const { getLeagues, getMatchDetails } = useSimulatedApi();
 
   useEffect(() => {
+    let active = true;
+
     const buildBreadcrumbs = async () => {
       const pathSegments = location.pathname.split("/").filter(Boolean);
-      const crumbs = [];
-
-      // Accueil toujours présent
-      crumbs.push({ name: "Accueil", path: "/" });
+      const crumbs = [{ name: "Accueil", path: "/" }];
 
       let currentPath = "";
-      for (let i = 0; i < pathSegments.length; i++) {
+
+      for (let i = 0; i < pathSegments.length; i += 1) {
         const segment = pathSegments[i];
         currentPath += `/${segment}`;
 
         if (segment === "league" && pathSegments[i + 1]) {
           const leagueId = pathSegments[i + 1];
           const leagues = await getLeagues();
-          const league = leagues.find((l) => l.id === parseInt(leagueId));
+          const league = leagues.find((item) => item.id === Number.parseInt(leagueId, 10));
+
           if (league) {
             crumbs.push({
               name: league.name,
-              path: currentPath + `/${leagueId}`,
+              path: `${currentPath}/${leagueId}`,
             });
           }
-          i++; // sauter l'id
-        } else if (segment === "match" && pathSegments[i + 1]) {
+
+          i += 1;
+          continue;
+        }
+
+        if (segment === "match" && pathSegments[i + 1]) {
           const matchId = pathSegments[i + 1];
           const match = await getMatchDetails(matchId);
+
           if (match) {
-            // TODO : Mettre le nom de la ligue
             crumbs.push({
               name: `${match.homeTeam} vs ${match.awayTeam}`,
-              path: currentPath + `/${matchId}`,
+              path: `${currentPath}/${matchId}`,
             });
           }
-          i++;
-        } else if (
-          segment !== "league" &&
-          segment !== "match" &&
-          isNaN(segment)
-        ) {
-          // Pages spéciales comme profile, login, etc.
-          const name = segment.charAt(0).toUpperCase() + segment.slice(1);
-          crumbs.push({ name, path: currentPath });
+
+          i += 1;
+          continue;
+        }
+
+        if (segment !== "league" && segment !== "match" && Number.isNaN(Number(segment))) {
+          crumbs.push({
+            name: segment.charAt(0).toUpperCase() + segment.slice(1),
+            path: currentPath,
+          });
         }
       }
 
-      setBreadcrumbs(crumbs);
+      if (active) {
+        setBreadcrumbs(crumbs);
+      }
     };
 
     buildBreadcrumbs();
-  }, [location, getLeagues, getMatchDetails]);
 
-  if (breadcrumbs.length <= 1) return null; // on n'affiche que s'il y a plus que l'accueil
+    return () => {
+      active = false;
+    };
+  }, [location.pathname, getLeagues, getMatchDetails]);
+
+  if (breadcrumbs.length <= 1) {
+    return null;
+  }
 
   return (
-    <nav className="text-sm text-gray-500 mb-4" aria-label="Fil d'Ariane">
-      <ol className="flex flex-wrap items-center space-x-2">
-        {breadcrumbs.map((crumb, index) => (
-          <li key={crumb.path} className="flex items-center">
-            {index > 0 && <span className="mx-2 text-gray-400">›</span>}
-            {index === breadcrumbs.length - 1 ? (
-              <span className="font-medium text-gray-700">{crumb.name}</span>
-            ) : (
-              <Link to={crumb.path} className="hover:text-blue-600 transition">
-                {crumb.name}
-              </Link>
-            )}
-          </li>
-        ))}
-      </ol>
-    </nav>
+    <MantineBreadcrumbs separator="›" separatorMargin="sm">
+      {breadcrumbs.map((crumb, index) =>
+        index === breadcrumbs.length - 1 ? (
+          <Text key={crumb.path} fw={700} c="white" size="sm">
+            {crumb.name}
+          </Text>
+        ) : (
+          <Anchor key={crumb.path} component={Link} to={crumb.path} size="sm" c="cyan.3">
+            {crumb.name}
+          </Anchor>
+        ),
+      )}
+    </MantineBreadcrumbs>
   );
 }

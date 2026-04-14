@@ -1,463 +1,413 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 
-// ----- Données mock correspondant au schéma BDD pour tester l'application -----
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+let leaguesCache = null;
+const matchesCache = new Map();
+const matchDetailsCache = new Map();
+const profileCache = new Map();
 
-// 1. Ligues (Leagues)
-const leagues = [
-  { id: 1, name: "Ligue 1 Uber Eats", code: "L1" },
-  { id: 2, name: "Premier League", code: "PL" },
-  { id: 3, name: "La Liga", code: "LALIGA" },
-  { id: 4, name: "Serie A", code: "SA" },
-];
+function splitRecentForm(value) {
+  if (!value) {
+    return [];
+  }
+  return String(value)
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
 
-// 2. Équipes (Teams)
-const teams = {
-  1: { id: 1, name: "Paris SG", short_name: "PSG", crest_url: null },
-  2: { id: 2, name: "Olympique Lyonnais", short_name: "OL", crest_url: null },
-  3: {
-    id: 3,
-    name: "Olympique de Marseille",
-    short_name: "OM",
-    crest_url: null,
-  },
-  4: { id: 4, name: "AS Monaco", short_name: "ASM", crest_url: null },
-  5: { id: 5, name: "RC Lens", short_name: "RCL", crest_url: null },
-  6: { id: 6, name: "Stade Rennais", short_name: "SRFC", crest_url: null },
-  7: { id: 7, name: "Manchester City", short_name: "MCI", crest_url: null },
-  8: { id: 8, name: "Arsenal", short_name: "ARS", crest_url: null },
-  9: { id: 9, name: "Liverpool", short_name: "LIV", crest_url: null },
-  10: { id: 10, name: "Chelsea", short_name: "CHE", crest_url: null },
-  11: { id: 11, name: "Real Madrid", short_name: "RMA", crest_url: null },
-  12: { id: 12, name: "Barcelona", short_name: "FCB", crest_url: null },
-  13: { id: 13, name: "Juventus", short_name: "JUV", crest_url: null },
-  14: { id: 14, name: "Inter Milan", short_name: "INT", crest_url: null },
-};
-
-// 3. Matchs (Matches)
-let matches = [
-  {
-    id: 1,
-    league_id: 1,
-    season: 2025,
-    utc_date: "2025-04-20T20:45:00Z",
-    home_team_id: 1,
-    away_team_id: 2,
-    home_score: null,
-    away_score: null,
-    status: "SCHEDULED",
-  },
-  {
-    id: 2,
-    league_id: 1,
-    season: 2025,
-    utc_date: "2025-04-21T21:00:00Z",
-    home_team_id: 3,
-    away_team_id: 4,
-    home_score: null,
-    away_score: null,
-    status: "SCHEDULED",
-  },
-  {
-    id: 3,
-    league_id: 1,
-    season: 2025,
-    utc_date: "2025-04-22T19:00:00Z",
-    home_team_id: 5,
-    away_team_id: 6,
-    home_score: null,
-    away_score: null,
-    status: "SCHEDULED",
-  },
-  {
-    id: 101,
-    league_id: 2,
-    season: 2025,
-    utc_date: "2025-04-20T17:30:00Z",
-    home_team_id: 7,
-    away_team_id: 8,
-    home_score: null,
-    away_score: null,
-    status: "SCHEDULED",
-  },
-  {
-    id: 102,
-    league_id: 2,
-    season: 2025,
-    utc_date: "2025-04-21T16:00:00Z",
-    home_team_id: 9,
-    away_team_id: 10,
-    home_score: null,
-    away_score: null,
-    status: "SCHEDULED",
-  },
-  {
-    id: 201,
-    league_id: 3,
-    season: 2025,
-    utc_date: "2025-04-20T21:00:00Z",
-    home_team_id: 11,
-    away_team_id: 12,
-    home_score: null,
-    away_score: null,
-    status: "SCHEDULED",
-  },
-  {
-    id: 301,
-    league_id: 4,
-    season: 2025,
-    utc_date: "2025-04-21T20:45:00Z",
-    home_team_id: 13,
-    away_team_id: 14,
-    home_score: null,
-    away_score: null,
-    status: "SCHEDULED",
-  },
-];
-
-// Pronostics liés aux matchs
-const predictions = {
-  1: {
-    match_id: 1,
-    win_probability_home: 0.58,
-    win_probability_away: 0.2,
-    predicted_result: "1",
-  },
-  2: {
-    match_id: 2,
-    win_probability_home: 0.45,
-    win_probability_away: 0.25,
-    predicted_result: "1",
-  },
-  3: {
-    match_id: 3,
-    win_probability_home: 0.52,
-    win_probability_away: 0.2,
-    predicted_result: "1",
-  },
-  101: {
-    match_id: 101,
-    win_probability_home: 0.55,
-    win_probability_away: 0.2,
-    predicted_result: "1",
-  },
-  102: {
-    match_id: 102,
-    win_probability_home: 0.6,
-    win_probability_away: 0.18,
-    predicted_result: "1",
-  },
-  201: {
-    match_id: 201,
-    win_probability_home: 0.48,
-    win_probability_away: 0.25,
-    predicted_result: "N",
-  },
-  301: {
-    match_id: 301,
-    win_probability_home: 0.4,
-    win_probability_away: 0.27,
-    predicted_result: "N",
-  },
-};
-
-// Utilisateurs simulés
-let users = [
-  {
-    id: 1,
-    username: "Alice",
-    email: "alice@example.com",
-    password_hash: "fake",
-  },
-  { id: 2, username: "Bob", email: "bob@example.com", password_hash: "fake" },
-];
-
-// Pronostics utilisateurs (UserPredictions) et historique (UserPredictionHistory)
-let userPredictions = [
-  { user_id: 1, match_id: 1, predicted_result: "1" },
-  { user_id: 1, match_id: 2, predicted_result: "N" },
-  { user_id: 2, match_id: 101, predicted_result: "2" },
-];
-
-let userPredictionHistory = [
-  {
-    user_id: 1,
-    match_id: 1,
-    predicted_result: "1",
-    actual_result: null,
-    prediction_date: "2025-03-15T10:00:00Z",
-  },
-  {
-    user_id: 1,
-    match_id: 2,
-    predicted_result: "N",
-    actual_result: null,
-    prediction_date: "2025-03-16T14:30:00Z",
-  },
-  {
-    user_id: 2,
-    match_id: 101,
-    predicted_result: "2",
-    actual_result: null,
-    prediction_date: "2025-03-17T09:15:00Z",
-  },
-];
-
-// ChatRooms une room "main" par match
-let chatRooms = {};
-matches.forEach((m) => {
-  chatRooms[m.id] = {
-    id: m.id,
-    match_id: m.id,
-    room_type: "main",
-    created_at: new Date().toISOString(),
-  };
-});
-
-// ChatRoomCounters compteur de séquence par room
-let chatRoomCounters = {};
-Object.keys(chatRooms).forEach((roomId) => {
-  chatRoomCounters[roomId] = { chat_room_id: parseInt(roomId), last_seq: 0 };
-});
-
-// ChatMessages stockés par room
-let chatMessages = {
-  1: [
-    {
-      id: 1,
-      chat_room_id: 1,
-      seq_in_room: 1,
-      user_id: 1,
-      message: "Qui va gagner le Classique ?",
-      created_at: "2025-04-04T10:30:00Z",
-    },
-    {
-      id: 2,
-      chat_room_id: 1,
-      seq_in_room: 2,
-      user_id: 2,
-      message: "PSG largement !",
-      created_at: "2025-04-04T10:32:00Z",
-    },
-  ],
-  101: [
-    {
-      id: 3,
-      chat_room_id: 101,
-      seq_in_room: 1,
-      user_id: 1,
-      message: "City va écraser Arsenal",
-      created_at: "2025-04-04T11:00:00Z",
-    },
-  ],
-};
-
-// Initialisation des compteurs à partir des messages existants
-for (const roomId in chatMessages) {
-  const msgs = chatMessages[roomId];
-  if (msgs.length) {
-    const maxSeq = Math.max(...msgs.map((m) => m.seq_in_room));
-    chatRoomCounters[roomId] = {
-      chat_room_id: parseInt(roomId),
-      last_seq: maxSeq,
-    };
+function normalizePredictionValue(value) {
+  switch (String(value || "").trim().toUpperCase()) {
+    case "1":
+    case "HOME":
+    case "HOME_WIN":
+    case "HOMEWIN":
+      return "HOME_WIN";
+    case "X":
+    case "N":
+    case "DRAW":
+    case "NUL":
+      return "DRAW";
+    case "2":
+    case "AWAY":
+    case "AWAY_WIN":
+    case "AWAYWIN":
+      return "AWAY_WIN";
+    default:
+      return value;
   }
 }
 
-// Obtenir le nom d'une équipe depuis son ID
-function getTeamName(teamId) {
-  return teams[teamId]?.name || "Équipe inconnue";
+function formatPredictionLabel(value) {
+  switch (normalizePredictionValue(value)) {
+    case "HOME_WIN":
+      return "Victoire domicile";
+    case "DRAW":
+      return "Match nul";
+    case "AWAY_WIN":
+      return "Victoire extérieur";
+    default:
+      return value || "";
+  }
 }
 
-// Formater un match pour l'affichage (jointure avec Teams)
-function enrichMatch(match) {
-  const pred = predictions[match.id] || {
-    win_probability_home: 33,
-    win_probability_away: 33,
-  };
+function formatDateTime(value, options = {}) {
+  if (!value) {
+    return "";
+  }
+  return new Date(value).toLocaleString("fr-FR", options);
+}
+
+function formatDate(value) {
+  return formatDateTime(value, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function isPastMatch(rawMatch) {
+  const status = String(rawMatch?.status || "").toUpperCase();
+  if (status === "FINISHED") {
+    return true;
+  }
+  if (!rawMatch?.utcDate) {
+    return false;
+  }
+  return new Date(rawMatch.utcDate).getTime() < Date.now() - 3 * 60 * 60 * 1000;
+}
+
+function isStartedMatch(rawMatch) {
+  if (!rawMatch?.utcDate) {
+    return false;
+  }
+  return new Date(rawMatch.utcDate).getTime() <= Date.now();
+}
+
+function mapLeague(rawLeague) {
   return {
-    id: match.id,
-    homeTeam: getTeamName(match.home_team_id),
-    awayTeam: getTeamName(match.away_team_id),
-    location: "Stade", // mock pour le moment
-    date: match.utc_date,
-    status: match.status,
-    home_score: match.home_score,
-    away_score: match.away_score,
-    stats: {
-      homeWinProb: Math.round(pred.win_probability_home * 100),
-      drawProb:
-        100 -
-        Math.round(pred.win_probability_home * 100) -
-        Math.round(pred.win_probability_away * 100),
-      awayWinProb: Math.round(pred.win_probability_away * 100),
-      recentForm: {
-        home: ["W", "W", "D", "W", "L"], // mock
-        away: ["L", "D", "W", "L", "D"],
-      },
-    },
+    id: rawLeague.id,
+    name: rawLeague.name,
+    code: rawLeague.code,
   };
+}
+
+function mapMatch(rawMatch, fallbackLeague) {
+  const finished = isPastMatch(rawMatch);
+  const started = isStartedMatch(rawMatch);
+  const homeScore = rawMatch.score?.fullTime?.home ?? null;
+  const awayScore = rawMatch.score?.fullTime?.away ?? null;
+
+  return {
+    id: rawMatch.id,
+    leagueId: rawMatch.leagueId ?? fallbackLeague?.id,
+    leagueCode: rawMatch.leagueCode ?? fallbackLeague?.code,
+    leagueName: rawMatch.leagueName ?? fallbackLeague?.name ?? "Compétition",
+    season: rawMatch.season,
+    homeTeam: rawMatch.homeTeam?.name || "Équipe domicile",
+    awayTeam: rawMatch.awayTeam?.name || "Équipe extérieur",
+    homeTeamId: rawMatch.homeTeam?.id,
+    awayTeamId: rawMatch.awayTeam?.id,
+    homeTeamShortName: rawMatch.homeTeam?.shortName || rawMatch.homeTeam?.name,
+    awayTeamShortName: rawMatch.awayTeam?.shortName || rawMatch.awayTeam?.name,
+    homeTeamCrest: rawMatch.homeTeam?.crest || null,
+    awayTeamCrest: rawMatch.awayTeam?.crest || null,
+    date: rawMatch.utcDate,
+    location: rawMatch.leagueName ?? fallbackLeague?.name ?? "Compétition",
+    status: rawMatch.status,
+    homeScore,
+    awayScore,
+    isFinished: finished,
+    isStarted: started,
+    canPredict: !finished && !started,
+    canChat: !finished,
+    scoreboard: homeScore !== null && awayScore !== null ? `${homeScore} - ${awayScore}` : "-",
+  };
+}
+
+function mapChatMessage(rawMessage) {
+  return {
+    id: rawMessage.id,
+    roomId: rawMessage.roomId,
+    matchId: rawMessage.matchId,
+    seqInChat: rawMessage.seqInChat,
+    userId: rawMessage.userId,
+    username: rawMessage.username || `User #${rawMessage.userId}`,
+    message: rawMessage.message,
+    feedbackDate: rawMessage.feedbackDate,
+    timestamp: formatDate(rawMessage.feedbackDate),
+  };
+}
+
+function mapProfile(rawProfile) {
+  if (!rawProfile) {
+    return null;
+  }
+
+  return {
+    id: rawProfile.id,
+    username: rawProfile.username,
+    email: rawProfile.email,
+    score: rawProfile.score ?? 0,
+    rank: rawProfile.rank ?? 0,
+    totalPredictions: rawProfile.totalPredictions ?? 0,
+    correctPredictions: rawProfile.correctPredictions ?? 0,
+    accuracy: Number(rawProfile.accuracy ?? 0),
+    chatMessages: rawProfile.chatMessages ?? 0,
+  };
+}
+
+async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const isJsonBody =
+    options.body !== undefined && options.body !== null && !(options.body instanceof FormData);
+
+  if (isJsonBody && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    ...options,
+    headers,
+    body: isJsonBody && typeof options.body !== "string"
+      ? JSON.stringify(options.body)
+      : options.body,
+  });
+
+  const text = await response.text();
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(data?.error || data?.message || "Erreur serveur");
+  }
+
+  return data;
+}
+
+async function ensureLeagues() {
+  if (leaguesCache) {
+    return leaguesCache;
+  }
+  const data = await apiFetch("/api/leagues", { method: "GET" });
+  leaguesCache = Array.isArray(data) ? data.map(mapLeague) : [];
+  return leaguesCache;
+}
+
+function matchesCacheKey(leagueCode, bucket, page, pageSize) {
+  return `${leagueCode}:${bucket}:${page}:${pageSize}`;
 }
 
 export const useSimulatedApi = () => {
   const [loading, setLoading] = useState(false);
 
-  // Récupérer toutes les ligues
-  const getLeagues = useCallback(async () => {
+  const withLoading = useCallback(async (fn) => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    setLoading(false);
-    return leagues;
-  }, []);
-
-  // Récupérer les matchs d'une ligue donnée
-  const getMatchesByLeague = useCallback(async (leagueId) => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 500));
-    const filtered = matches.filter((m) => m.league_id === parseInt(leagueId));
-    const enriched = filtered.map(enrichMatch);
-    setLoading(false);
-    return enriched;
-  }, []);
-
-  // Récupérer les détails d'un match
-  const getMatchDetails = useCallback(async (matchId) => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 300));
-    const match = matches.find((m) => m.id === parseInt(matchId));
-    if (!match) {
+    try {
+      return await fn();
+    } finally {
       setLoading(false);
-      return null;
     }
-    const enriched = enrichMatch(match);
-    setLoading(false);
-    return enriched;
   }, []);
 
-  // Récupérer l'historique des pronostics d'un utilisateur
-  const getUserPredictions = useCallback(async (userId) => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 400));
-    const userPreds = userPredictionHistory.filter(
-      (ph) => ph.user_id === parseInt(userId),
-    );
-    const enriched = userPreds.map((ph) => {
-      const match = matches.find((m) => m.id === ph.match_id);
-      const matchName = match
-        ? `${getTeamName(match.home_team_id)} - ${getTeamName(match.away_team_id)}`
-        : `Match ${ph.match_id}`;
-      let points = null;
-      if (ph.actual_result) {
-        points = ph.predicted_result === ph.actual_result ? 3 : 0;
+  const getLeagues = useCallback(async () => withLoading(ensureLeagues), [withLoading]);
+
+  const getMatchesByLeague = useCallback(async (leagueId, options = {}) => {
+    return withLoading(async () => {
+      const bucket = options.bucket || "upcoming";
+      const page = options.page || 1;
+      const pageSize = options.pageSize || 12;
+      const leagues = await ensureLeagues();
+      const league = leagues.find((item) => String(item.id) === String(leagueId));
+      if (!league) {
+        return { items: [], page: 1, pageSize, total: 0, totalPages: 0, bucket };
       }
-      return {
-        id: `${ph.user_id}_${ph.match_id}`,
-        match: matchName,
-        predictedResult: ph.predicted_result,
-        actualResult: ph.actual_result,
-        date: new Date(ph.prediction_date).toISOString().split("T")[0],
-        points: points,
+
+      const key = matchesCacheKey(league.code, bucket, page, pageSize);
+      if (matchesCache.has(key)) {
+        return matchesCache.get(key);
+      }
+
+      const data = await apiFetch(
+        `/api/matches?league=${encodeURIComponent(league.code)}&bucket=${encodeURIComponent(bucket)}&page=${encodeURIComponent(page)}&pageSize=${encodeURIComponent(pageSize)}`,
+        { method: "GET" },
+      );
+
+      const response = {
+        items: Array.isArray(data?.items) ? data.items.map((item) => mapMatch(item, league)) : [],
+        page: data?.page ?? page,
+        pageSize: data?.pageSize ?? pageSize,
+        total: data?.total ?? 0,
+        totalPages: data?.totalPages ?? 0,
+        bucket: data?.bucket ?? bucket,
+        league,
       };
+
+      matchesCache.set(key, response);
+      for (const item of response.items) {
+        matchDetailsCache.set(String(item.id), item);
+      }
+      return response;
     });
-    setLoading(false);
-    return enriched;
-  }, []);
+  }, [withLoading]);
 
-  // Ajouter un pronostic utilisateur (dans UserPredictions et UserPredictionHistory)
-  const addPrediction = useCallback(async (matchId, prediction) => {
-    setLoading(true);
-    await new Promise((r) => setTimeout(r, 300));
-    const userId = 1; // À remplacer par l'ID de l'utilisateur connecté
-    // Vérifier si le pronostic existe déjà
-    const existingIndex = userPredictions.findIndex(
-      (up) => up.user_id === userId && up.match_id === parseInt(matchId),
-    );
-    if (existingIndex !== -1) {
-      userPredictions[existingIndex].predicted_result = prediction;
-    } else {
-      userPredictions.push({
-        user_id: userId,
-        match_id: parseInt(matchId),
-        predicted_result: prediction,
+  const getMatchDetails = useCallback(async (matchId) => {
+    return withLoading(async () => {
+      const rawMatch = await apiFetch(`/api/matches?matchId=${encodeURIComponent(matchId)}`, {
+        method: "GET",
       });
-    }
-    // Ajouter dans l'historique
-    const historyEntry = {
-      user_id: userId,
-      match_id: parseInt(matchId),
-      predicted_result: prediction,
-      actual_result: null,
-      prediction_date: new Date().toISOString(),
-    };
-    const historyIndex = userPredictionHistory.findIndex(
-      (h) => h.user_id === userId && h.match_id === parseInt(matchId),
-    );
-    if (historyIndex !== -1) {
-      userPredictionHistory[historyIndex] = historyEntry;
-    } else {
-      userPredictionHistory.push(historyEntry);
-    }
-    setLoading(false);
-    return { success: true };
-  }, []);
+      if (!rawMatch) {
+        return null;
+      }
 
-  // Chat par match (basé sur ChatRooms, ChatRoomCounters, ChatMessages)
-  const getChatMessages = useCallback(async (matchId) => {
-    await new Promise((r) => setTimeout(r, 300));
-    const roomId = matchId; // on utilise matchId comme chat_room_id (id de la room = id du match)
-    const msgs = chatMessages[roomId] || [];
-    // Enrichir avec le nom d'utilisateur
-    const enriched = msgs.map((msg) => ({
-      id: msg.id,
-      user: users.find((u) => u.id === msg.user_id)?.username || "Inconnu",
-      message: msg.message,
-      timestamp: new Date(msg.created_at).toLocaleTimeString(),
-    }));
-    // Trier par séquence croissante (ancien en premier) ou décroissant selon affichage
-    return enriched.reverse();
-  }, []);
+      const leagues = await ensureLeagues();
+      const fallbackLeague = leagues.find((league) => league.code === rawMatch.leagueCode || league.id === rawMatch.leagueId);
+      const baseMatch = mapMatch(rawMatch, fallbackLeague);
 
-  const sendChatMessage = useCallback(async (matchId, message, user) => {
-    await new Promise((r) => setTimeout(r, 200));
-    const roomId = matchId;
-    // Récupérer l'utilisateur réel (pour obtenir son id)
-    const dbUser = users.find((u) => u.username === user.name) || {
-      id: 1,
-      username: user.name,
-    };
-    // Incrémenter le compteur de la room
-    if (!chatRoomCounters[roomId]) {
-      chatRoomCounters[roomId] = {
-        chat_room_id: parseInt(roomId),
-        last_seq: 0,
+      let stats = null;
+      try {
+        stats = await apiFetch(`/api/stats?matchId=${encodeURIComponent(matchId)}`, {
+          method: "GET",
+        });
+      } catch {
+        stats = null;
+      }
+
+      const detailedMatch = {
+        ...baseMatch,
+        stats: {
+          homeWinProb: Math.round(stats?.homeWinProb ?? 33),
+          drawProb: Math.round(stats?.drawProb ?? 34),
+          awayWinProb: Math.round(stats?.awayWinProb ?? 33),
+          recentForm: {
+            home: splitRecentForm(stats?.homeLastResults),
+            away: splitRecentForm(stats?.awayLastResults),
+          },
+        },
       };
-    }
-    chatRoomCounters[roomId].last_seq += 1;
-    const newSeq = chatRoomCounters[roomId].last_seq;
-    // Créer le message
-    const newMsg = {
-      id: Date.now(),
-      chat_room_id: parseInt(roomId),
-      seq_in_room: newSeq,
-      user_id: dbUser.id,
-      message: message,
-      created_at: new Date().toISOString(),
-    };
-    if (!chatMessages[roomId]) chatMessages[roomId] = [];
-    chatMessages[roomId].push(newMsg);
-    // Retourner le message formaté pour le front
-    return {
-      id: newMsg.id,
-      user: dbUser.username,
-      message: message,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-  }, []);
+      matchDetailsCache.set(String(matchId), detailedMatch);
+      return detailedMatch;
+    });
+  }, [withLoading]);
+
+  const getProfileSummary = useCallback(async () => {
+    return withLoading(async () => {
+      const data = await apiFetch("/api/profile", { method: "GET" });
+      const mapped = mapProfile(data);
+      if (mapped) {
+        profileCache.set(String(mapped.id), mapped);
+      }
+      return mapped;
+    });
+  }, [withLoading]);
+
+  const getUserProfile = useCallback(async (userId) => {
+    return withLoading(async () => {
+      const cached = profileCache.get(String(userId));
+      if (cached) {
+        return cached;
+      }
+      const data = await apiFetch(`/api/users?userId=${encodeURIComponent(userId)}`, { method: "GET" });
+      const mapped = mapProfile(data);
+      if (mapped) {
+        profileCache.set(String(userId), mapped);
+      }
+      return mapped;
+    });
+  }, [withLoading]);
+
+  const getLeaderboard = useCallback(async () => {
+    return withLoading(async () => {
+      const data = await apiFetch("/api/scores", { method: "GET" });
+      return Array.isArray(data) ? data : [];
+    });
+  }, [withLoading]);
+
+  const getUserPredictions = useCallback(async () => {
+    return withLoading(async () => {
+      const data = await apiFetch("/api/my-predictions", { method: "GET" });
+      return Array.isArray(data)
+        ? data.map((item, index) => {
+            const normalizedPredictedResult = normalizePredictionValue(item.predictedResult);
+            const normalizedActualResult = normalizePredictionValue(item.actualResult);
+
+            return {
+              id: `${item.matchId}-${item.predictionDate}-${index}`,
+              matchId: item.matchId,
+              match: `${item.homeTeam} vs ${item.awayTeam}`,
+              predictedResult: formatPredictionLabel(item.predictedResult),
+              rawPredictedResult: item.predictedResult,
+              normalizedPredictedResult,
+              actualResult: formatPredictionLabel(item.actualResult),
+              rawActualResult: item.actualResult,
+              normalizedActualResult,
+              date: formatDate(item.predictionDate),
+              matchDate: formatDate(item.matchDate),
+              points:
+                item.actualResult &&
+                normalizedPredictedResult === normalizedActualResult
+                  ? 1
+                  : 0,
+            };
+          })
+        : [];
+    });
+  }, [withLoading]);
+
+  const addPrediction = useCallback(async (matchId, predictedResult) => {
+    return withLoading(async () => {
+      const normalized = normalizePredictionValue(predictedResult);
+      return apiFetch("/api/predict", {
+        method: "POST",
+        body: {
+          matchId: Number(matchId),
+          predictedResult: normalized,
+        },
+      });
+    });
+  }, [withLoading]);
+
+  const getChatMessages = useCallback(async (matchId, afterSeq = 0, limit = 100) => {
+    return withLoading(async () => {
+      const data = await apiFetch(
+        `/api/feedbacks?matchId=${encodeURIComponent(matchId)}&afterSeq=${encodeURIComponent(afterSeq)}&limit=${encodeURIComponent(limit)}`,
+        { method: "GET" },
+      );
+
+      const messages = Array.isArray(data) ? data.map(mapChatMessage) : [];
+      messages.sort((a, b) => a.seqInChat - b.seqInChat);
+      return messages;
+    });
+  }, [withLoading]);
+
+  const sendChatMessage = useCallback(async (matchId, message) => {
+    return withLoading(async () => {
+      const created = await apiFetch("/api/feedback", {
+        method: "POST",
+        body: {
+          matchId: Number(matchId),
+          message,
+        },
+      });
+      return mapChatMessage(created);
+    });
+  }, [withLoading]);
 
   return {
     loading,
     getLeagues,
     getMatchesByLeague,
     getMatchDetails,
+    getProfileSummary,
+    getUserProfile,
+    getLeaderboard,
     getUserPredictions,
     addPrediction,
     getChatMessages,

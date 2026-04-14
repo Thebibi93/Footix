@@ -95,6 +95,8 @@ func main() {
 	// Enregistrement de toutes les autres routes de l'API
 	RegisterRoutes(db)
 
+	fmt.Println("Toutes les routes ont été bien enregistrés")
+
 	// Lancement du serveur (Bloquant)
 	fmt.Println("Serveur prêt sur http://localhost:8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {

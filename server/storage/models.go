@@ -15,19 +15,38 @@ type MatchesResponse struct {
 	Matches []MatchData `json:"matches"`
 }
 
+type League struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+}
+
 // MatchData représente un match unique à insérer en base
 type MatchData struct {
-	Id       int      `json:"id"`
-	UtcDate  string   `json:"utcDate"`
-	Status   string   `json:"status"`
-	HomeTeam TeamInfo `json:"homeTeam"`
-	AwayTeam TeamInfo `json:"awayTeam"`
-	Score    struct {
+	Id         int      `json:"id"`
+	LeagueID   int      `json:"leagueId,omitempty"`
+	LeagueCode string   `json:"leagueCode,omitempty"`
+	LeagueName string   `json:"leagueName,omitempty"`
+	Season     int      `json:"season,omitempty"`
+	UtcDate    string   `json:"utcDate"`
+	Status     string   `json:"status"`
+	HomeTeam   TeamInfo `json:"homeTeam"`
+	AwayTeam   TeamInfo `json:"awayTeam"`
+	Score      struct {
 		FullTime struct {
 			Home int `json:"home"`
 			Away int `json:"away"`
 		} `json:"fullTime"`
 	} `json:"score"`
+}
+
+type MatchListResponse struct {
+	Items      []MatchData `json:"items"`
+	Page       int         `json:"page"`
+	PageSize   int         `json:"pageSize"`
+	Total      int         `json:"total"`
+	TotalPages int         `json:"totalPages"`
+	Bucket     string      `json:"bucket"`
 }
 
 type TeamInfo struct {
@@ -56,6 +75,18 @@ type PublicUser struct {
 	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Email    string `json:"email,omitempty"`
+}
+
+type UserProfileSummary struct {
+	ID                 int     `json:"id"`
+	Username           string  `json:"username"`
+	Email              string  `json:"email,omitempty"`
+	Score              int     `json:"score"`
+	Rank               int     `json:"rank"`
+	TotalPredictions   int     `json:"totalPredictions"`
+	CorrectPredictions int     `json:"correctPredictions"`
+	Accuracy           float64 `json:"accuracy"`
+	ChatMessages       int     `json:"chatMessages"`
 }
 
 type UserPrediction struct {
