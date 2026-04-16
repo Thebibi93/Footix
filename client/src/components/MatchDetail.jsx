@@ -18,7 +18,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
-import { useSimulatedApi } from "../hooks/useSimulatedApi";
+import { useSimulatedApi } from "../hooks/UseApi";
 import { useAuth } from "../contexts/AuthContext";
 import MatchChat from "./MatchChat";
 
@@ -429,7 +429,7 @@ export default function MatchDetail() {
           <Stack gap="xs">
             <Title order={3}>Discussion fermée</Title>
             <Text c="dimmed">
-              Le chat n'est plus affiché sur les matchs passés. Le détail se concentre ici sur le score et le contexte sportif.
+              Le chat n'est plus affiché sur les matchs passés. Pas de complaintes sur le résultat !
             </Text>
           </Stack>
         </Card>

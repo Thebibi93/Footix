@@ -15,7 +15,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { useSimulatedApi } from "../hooks/useSimulatedApi";
+import { useSimulatedApi } from "../hooks/UseApi";
 import { useAuth } from "../contexts/AuthContext";
 
 function initials(name) {

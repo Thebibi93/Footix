@@ -21,7 +21,7 @@ export default function Navbar() {
                 Footix
               </Text>
               <Text size="xs" c="dimmed" mt={4} lh={1.25} style={{ maxWidth: 320 }}>
-                Football intelligence · chat live · pronostics
+                Football palpitant · chat live · pronostics
               </Text>
             </Box>
           </Link>

@@ -14,7 +14,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useAuth } from "../contexts/AuthContext";
-import { useSimulatedApi } from "../hooks/useSimulatedApi";
+import { useSimulatedApi } from "../hooks/UseApi";
 import PredictionHistory from "./PredictionHistory";
 
 export default function Profile() {

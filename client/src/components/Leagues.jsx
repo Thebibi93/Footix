@@ -13,7 +13,7 @@ import {
 } from "@mantine/core";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useSimulatedApi } from "../hooks/useSimulatedApi";
+import { useSimulatedApi } from "../hooks/UseApi";
 
 const MotionCard = motion.create(Card);
 

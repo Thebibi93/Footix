@@ -24,17 +24,17 @@ import Breadcrumb from "./components/Breadcrumb";
 const featureCards = [
   {
     title: "Deux vues de calendrier",
-    description: "Séparez les rencontres à venir des matchs déjà terminés, avec pagination fluide.",
+    description: "Observez les matchs à venir et les résultats terminés.",
     emoji: "📅",
   },
   {
-    title: "Pronostics cadrés",
-    description: "Les prédictions sont désormais limitées aux matchs encore jouables.",
+    title: "Des pronostics palpitants",
+    description: "Ressentez l'adréaline d'un pari 100% Hallal.",
     emoji: "🎯",
   },
   {
     title: "Communauté vivante",
-    description: "Consultez le profil des participants directement depuis le chat du match.",
+    description: "Intéragissez avec d'autres fans de foots.",
     emoji: "💬",
   },
 ];
@@ -50,7 +50,7 @@ function Home() {
 
           <Stack gap={6} maw={760}>
             <Title order={1} fz={{ base: 34, md: 54 }} lh={1.02}>
-              Footix devient un hub de pronostics, de scores et de conversations live.
+              Footix est un hub de pronostics, de scores et de conversations live.
             </Title>
             <Text size="lg" c="dimmed" maw={680}>
               Explorez les compétitions, basculez entre les matchs à venir et les affiches passées,

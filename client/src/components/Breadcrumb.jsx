@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Anchor, Breadcrumbs as MantineBreadcrumbs, Text } from "@mantine/core";
 import { Link, useLocation } from "react-router-dom";
-import { useSimulatedApi } from "../hooks/useSimulatedApi";
+import { useSimulatedApi } from "../hooks/UseApi";
 
 export default function Breadcrumb() {
   const location = useLocation();

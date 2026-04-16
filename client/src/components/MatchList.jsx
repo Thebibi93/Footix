@@ -15,7 +15,7 @@ import {
   Title,
 } from "@mantine/core";
 import { useParams, Link } from "react-router-dom";
-import { useSimulatedApi } from "../hooks/useSimulatedApi";
+import { useSimulatedApi } from "../hooks/UseApi";
 
 function formatMatchDate(date) {
   return new Date(date).toLocaleString("fr-FR", {
