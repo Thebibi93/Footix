@@ -1,18 +1,8 @@
-# Construction de l'application Go
 FROM golang:1.25-alpine AS builder
-
-# Définit le répertoire de travail dans le conteneur
 WORKDIR /app
-
-# Copie les fichiers de dépendances Go
 COPY go.mod go.sum ./
-
-# Télécharge les dépendances
 RUN go mod download
-
-# Copie le reste du code source
 COPY . .
-
 RUN go build -o main .
 
 # Image finale légère pour l'exécution
