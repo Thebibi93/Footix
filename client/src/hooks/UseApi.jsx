@@ -205,7 +205,7 @@ function matchesCacheKey(leagueCode, bucket, page, pageSize) {
   return `${leagueCode}:${bucket}:${page}:${pageSize}`;
 }
 
-export const useSimulatedApi = () => {
+export const useApi = () => {
   const [loading, setLoading] = useState(false);
 
   const withLoading = useCallback(async (fn) => {

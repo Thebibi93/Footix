@@ -15,13 +15,14 @@ import {
   Title,
 } from "@mantine/core";
 import { useParams, Link } from "react-router-dom";
-import { useSimulatedApi } from "../hooks/UseApi";
+import { useApi } from "../hooks/UseApi";
 
 function formatMatchDate(date) {
   return new Date(date).toLocaleString("fr-FR", {
     weekday: "short",
     day: "2-digit",
     month: "short",
+    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -44,7 +45,7 @@ export default function MatchList() {
   const [page, setPage] = useState(1);
   const [response, setResponse] = useState({ items: [], page: 1, totalPages: 0, total: 0 });
   const [error, setError] = useState("");
-  const { getLeagues, getMatchesByLeague, loading } = useSimulatedApi();
+  const { getLeagues, getMatchesByLeague, loading } = useApi();
 
   useEffect(() => {
     setPage(1);
@@ -96,7 +97,6 @@ export default function MatchList() {
             <Title order={1} mt={8}>{league?.name || "Compétition"}</Title>
             <Text c="dimmed" mt={6} maw={760}>
               Alternez entre les rencontres ouvertes aux pronostics et les résultats déjà scellés.
-              Les matchs terminés affichent seulement le score final pour garder l'expérience claire.
             </Text>
           </div>
           <Group gap="xs">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Alert, Badge, Card, Center, Group, Loader, Pagination, Stack, Text, Title } from "@mantine/core";
-import { useSimulatedApi } from "../hooks/UseApi";
+import { useApi } from "../hooks/UseApi";
 import { useAuth } from "../contexts/AuthContext";
 
 const PAGE_SIZE = 6;
@@ -33,7 +33,7 @@ export default function PredictionHistory() {
   const [predictions, setPredictions] = useState([]);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
-  const { getUserPredictions, loading } = useSimulatedApi();
+  const { getUserPredictions, loading } = useApi();
   const { user } = useAuth();
 
   useEffect(() => {

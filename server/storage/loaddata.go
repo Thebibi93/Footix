@@ -234,9 +234,6 @@ func GetMatchesPageByLeague(db *sql.DB, leagueCode, bucket string, page, pageSiz
 		PageSize: pageSize,
 		Bucket:   strings.ToLower(strings.TrimSpace(bucket)),
 	}
-	if response.Bucket == "" {
-		response.Bucket = "upcoming"
-	}
 
 	countQuery := fmt.Sprintf(`
         SELECT COUNT(*)
@@ -258,6 +255,12 @@ func GetMatchesPageByLeague(db *sql.DB, leagueCode, bucket string, page, pageSiz
 		response.Page = page
 	}
 	offset := (page - 1) * pageSize
+
+	// Ordre de tri selon le bucket
+	orderDir := "ASC"
+	if response.Bucket == "past" || response.Bucket == "finished" {
+		orderDir = "DESC"
+	}
 
 	dataQuery := fmt.Sprintf(`
         SELECT
@@ -283,8 +286,8 @@ func GetMatchesPageByLeague(db *sql.DB, leagueCode, bucket string, page, pageSiz
         JOIN Teams t1 ON m.home_team_id = t1.id
         JOIN Teams t2 ON m.away_team_id = t2.id
         WHERE l.code = $1 AND %s
-        ORDER BY m.utc_date DESC
-        LIMIT $2 OFFSET $3`, clause)
+        ORDER BY m.utc_date %s
+        LIMIT $2 OFFSET $3`, clause, orderDir)
 
 	rows, err := db.Query(dataQuery, leagueCode, pageSize, offset)
 	if err != nil {
@@ -301,13 +304,4 @@ func GetMatchesPageByLeague(db *sql.DB, leagueCode, bucket string, page, pageSiz
 	}
 
 	return response, rows.Err()
-}
-
-// GetMatchesByLeague garde la compatibilité avec l'ancien appel sans pagination.
-func GetMatchesByLeague(db *sql.DB, leagueCode string) ([]MatchData, error) {
-	response, err := GetMatchesPageByLeague(db, leagueCode, "all", 1, 50)
-	if err != nil {
-		return nil, err
-	}
-	return response.Items, nil
 }
