@@ -3,6 +3,10 @@
     {
       "source": "/api/:path*",
       "destination": "https://footix-t8l9.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ]
 }
