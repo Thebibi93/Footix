@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"footix/storage"
+	"io"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -38,73 +40,73 @@ import (
 
 // FetchAndSaveLeague contacte l'API externe pour récupérer les métadonnées d'une compétition.
 // Cette fonction répond à la contrainte de peupler la base de données via une API dynamique[cite: 19, 23].
-func FetchAndSaveLeague(db *sql.DB, token string, leagueCode string) error {
-	// Construction de l'URL pour une compétition spécifique (ex: PL, FL1)
-	url := fmt.Sprintf("https://api.football-data.org/v4/competitions/%s", leagueCode)
+// Package services gère la logique métier liée aux interactions avec les API externes.
+// Conformément aux contraintes du projet, il utilise exclusivement le package net/http.
 
-	// Initialisation de la requête GET
-	req, _ := http.NewRequest("GET", url, nil)
-
-	// Ajout du jeton d'authentification requis par les conditions d'utilisation de l'API
+func executeAPIRequest(token string, url string, target any) error {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("création requête API impossible: %w", err)
+	}
 	req.Header.Set("X-Auth-Token", token)
 
-	// Exécution de l'appel HTTP via le client standard de Go
-	client := &http.Client{}
+	client := &http.Client{Timeout: 25 * time.Second}
 	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		return fmt.Errorf("erreur API League (Statut %d): %v", resp.StatusCode, err)
+	if err != nil {
+		return fmt.Errorf("appel API impossible: %w", err)
 	}
-	// Fermeture du corps de la réponse pour libérer les ressources (important pour éviter les fuites de mémoire)
 	defer resp.Body.Close()
 
-	// Décodage du flux JSON reçu directement dans la structure Go définie dans le stockage
-	var data storage.CompetitionResponse
-	// On crée le décodeur sur le flux (resp.Body)
-	// Decode(&team) "verse" les données dans la struct via son pointeur
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return err
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+		msg := strings.TrimSpace(string(body))
+		if msg == "" {
+			msg = http.StatusText(resp.StatusCode)
+		}
+		return fmt.Errorf("API HTTP %d: %s", resp.StatusCode, msg)
 	}
 
-	// Appel de la couche de persistance pour sauvegarder ou mettre à jour la ligue
+	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
+		return fmt.Errorf("décodage JSON impossible: %w", err)
+	}
+
+	return nil
+}
+
+// FetchAndSaveLeague contacte l'API externe pour récupérer les métadonnées d'une compétition.
+func FetchAndSaveLeague(db *sql.DB, token string, leagueCode string) error {
+	url := fmt.Sprintf("https://api.football-data.org/v4/competitions/%s", leagueCode)
+
+	var data storage.CompetitionResponse
+	if err := executeAPIRequest(token, url, &data); err != nil {
+		return fmt.Errorf("erreur API League %s: %w", leagueCode, err)
+	}
+
 	return storage.SaveLeague(db, data.Id, data.Name, data.Code)
 }
 
 // FetchAndSaveMatches récupère l'historique des matchs pour une saison précise.
-// Les données récupérées serviront de base pour l'algorithme de prédiction statistique.
 func FetchAndSaveMatches(db *sql.DB, token string, leagueCode string, season int) error {
-	// RÉCUPÉRATION DYNAMIQUE DE L'ID
-	// On cherche l'ID en base associé au code (ex: "PL") pour éviter les erreurs d'intégrité.
 	leagueID, err := storage.GetLeagueIDByCode(db, leagueCode)
 	if err != nil {
-		return fmt.Errorf("impossible de procéder aux matchs : %v", err)
+		return fmt.Errorf("impossible de procéder aux matchs: %w", err)
 	}
 
-	// Utilisation du paramètre "season" pour obtenir les données historiques dynamiques
 	url := fmt.Sprintf("https://api.football-data.org/v4/competitions/%s/matches?season=%d", leagueCode, season)
 
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("X-Auth-Token", token)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		return fmt.Errorf("erreur API Matches pour la saison %d: %v", season, err)
-	}
-	defer resp.Body.Close()
-
 	var data storage.MatchesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return err
+	if err := executeAPIRequest(token, url, &data); err != nil {
+		return fmt.Errorf("erreur API Matches pour la saison %d: %w", season, err)
 	}
 
-	// Itération sur chaque match reçu dans la réponse JSON
 	for _, m := range data.Matches {
-		// IMPORTANT : Sauvegarder les équipes AVANT les matchs à cause des clés étrangères (Foreign Keys).
-		// Chaque match contient les informations minimales sur les équipes (Home et Away).
-		storage.SaveTeam(db, m.HomeTeam.Id, m.HomeTeam.Name, m.HomeTeam.ShortName, m.HomeTeam.Crest)
-		storage.SaveTeam(db, m.AwayTeam.Id, m.AwayTeam.Name, m.AwayTeam.ShortName, m.AwayTeam.Crest)
+		if err := storage.SaveTeam(db, m.HomeTeam.Id, m.HomeTeam.Name, m.HomeTeam.ShortName, m.HomeTeam.Crest); err != nil {
+			fmt.Printf("Erreur lors de l'insertion de l'équipe domicile %d: %v\n", m.HomeTeam.Id, err)
+		}
+		if err := storage.SaveTeam(db, m.AwayTeam.Id, m.AwayTeam.Name, m.AwayTeam.ShortName, m.AwayTeam.Crest); err != nil {
+			fmt.Printf("Erreur lors de l'insertion de l'équipe extérieure %d: %v\n", m.AwayTeam.Id, err)
+		}
 
-		// Sauvegarde du match avec son score et son statut (FINISHED, SCHEDULED, etc.)
 		err := storage.SaveMatch(db, leagueID, season, m)
 		if err != nil {
 			fmt.Printf("Erreur lors de l'insertion du match %d: %v\n", m.Id, err)
@@ -115,15 +117,7 @@ func FetchAndSaveMatches(db *sql.DB, token string, leagueCode string, season int
 	return nil
 }
 
-
-/*
-	Là le serveur va tourner en permanence et on gros chaque 10 minutes on
-	essaie de voir si y'a de nouveau match à importer pour la saison en cours
-	on les fetch à la DB
-*/
 // FetchApi lance une synchronisation périodique pour une ligue/saison.
-// Elle s'exécute immédiatement une première fois, puis toutes les 10 minutes.
-// L'arrêt se fait proprement via le context.
 func FetchApi(ctx context.Context, db *sql.DB, token string, leagues []string, season int, apiTasks chan APITask) {
 	const refreshInterval = 10 * time.Minute
 
@@ -137,12 +131,11 @@ func FetchApi(ctx context.Context, db *sql.DB, token string, leagues []string, s
 				Label: fmt.Sprintf("refresh matches %s season %d", leagueCode, season),
 				Run: func() error {
 					return FetchAndSaveMatches(db, token, leagueCode, season)
-				}, 
+				},
 			}
 		}
 	}
 
-	// Premier envoi immédiat
 	enqueueAll()
 
 	ticker := time.NewTicker(refreshInterval)
@@ -150,12 +143,11 @@ func FetchApi(ctx context.Context, db *sql.DB, token string, leagues []string, s
 
 	for {
 		select {
-			case <-ctx.Done():
-				fmt.Println("Arrêt de FetchApi")
-				return
-
-			case <-ticker.C:
-				enqueueAll()
+		case <-ctx.Done():
+			fmt.Println("Arrêt de FetchApi")
+			return
+		case <-ticker.C:
+			enqueueAll()
 		}
 	}
 }

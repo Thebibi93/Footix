@@ -1,18 +1,34 @@
-# React + Vite
+# Footix client
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Client React/Vite pour une application de pronostics football. Le projet a été migré de Tailwind vers Mantine pour réduire la verbosité des composants et centraliser davantage le système d'interface.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- Vite 8
+- React Router DOM 7
+- Mantine 9
 
-## React Compiler
+## Installation
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+```bash
+npm install
+npm run dev
+```
 
-Note: This will impact Vite dev & build performances.
+## Scripts
 
-## Expanding the ESLint configuration
+- `npm run dev` : lance le serveur de développement Vite
+- `npm run build` : construit la version de production
+- `npm run preview` : prévisualise le build de production
+- `npm run lint` : lance ESLint
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Principes de la migration Mantine
+
+- Suppression de Tailwind et de son plugin Vite
+- Ajout d'un `MantineProvider` global
+- Centralisation du thème dans `src/theme.js`
+- Remplacement des `className` Tailwind par des composants Mantine (`Card`, `Stack`, `Group`, `Button`, `TextInput`, etc.)
+- Réduction du CSS global à quelques règles de base
+
+Voir `MIGRATION_MANTINE.md` pour le détail fichier par fichier.
