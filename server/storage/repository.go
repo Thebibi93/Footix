@@ -2,12 +2,60 @@ package storage
 
 import (
 	"context"
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 )
+
+// Crée un token aléatoire de 32 octets (64 caractères hex)
+func GenerateSessionToken() (string, error) {
+	b := make([]byte, 32)
+	_, err := rand.Read(b)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(b), nil
+}
+
+// Insère une nouvelle session et retourne le token
+func CreateSession(db *sql.DB, userID int) (string, error) {
+	token, err := GenerateSessionToken()
+	if err != nil {
+		return "", err
+	}
+	expires := time.Now().Add(7 * 24 * time.Hour)
+	_, err = db.Exec(`
+        INSERT INTO UserSessions (token, user_id, expires_at)
+        VALUES ($1, $2, $3)
+    `, token, userID, expires)
+	return token, err
+}
+
+// Vérifie que le token existe et n'a pas expiré, retourne l'user_id
+func ValidateSession(db *sql.DB, token string) (int, error) {
+	// nettoie les sessions expirées au passage (peut être fait périodiquement)
+	_, _ = db.Exec(`DELETE FROM UserSessions WHERE token = $1 AND expires_at < now()`, token)
+
+	var userID int
+	err := db.QueryRow(`
+        SELECT user_id FROM UserSessions
+        WHERE token = $1 AND expires_at >= now()
+    `, token).Scan(&userID)
+	if err == sql.ErrNoRows {
+		return 0, errors.New("session invalide ou expirée")
+	}
+	return userID, err
+}
+
+// Supprime le token (déconnexion)
+func DeleteSession(db *sql.DB, token string) error {
+	_, err := db.Exec(`DELETE FROM UserSessions WHERE token = $1`, token)
+	return err
+}
 
 // GetLeagueIDByCode récupère l'ID numérique d'une ligue à partir de son code mnémonique (ex: 'FL1').
 func GetLeagueIDByCode(db *sql.DB, leagueCode string) (int, error) {

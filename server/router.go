@@ -13,8 +13,6 @@ import (
 	"time"
 )
 
-const sessionCookieName = "footix_user_id"
-
 func RegisterRoutes(db *sql.DB) {
 	registerJSONRoute("/api/profile", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -200,20 +198,28 @@ func passwordMatches(storedValue, plainPassword string) bool {
 	return storedValue == candidate || storedValue == plainPassword
 }
 
-func setSessionCookie(w http.ResponseWriter, userID int) {
+func setSessionCookie(w http.ResponseWriter, db *sql.DB, userID int) error {
+	token, err := storage.CreateSession(db, userID)
+	if err != nil {
+		return err
+	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
-		Value:    strconv.Itoa(userID),
+		Name:     "footix_session",
+		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   7 * 24 * 60 * 60,
 	})
+	return nil
 }
 
-func clearSessionCookie(w http.ResponseWriter) {
+func clearSessionCookie(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	if cookie, err := r.Cookie("footix_session"); err == nil {
+		storage.DeleteSession(db, cookie.Value)
+	}
 	http.SetCookie(w, &http.Cookie{
-		Name:     sessionCookieName,
+		Name:     "footix_session",
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
@@ -223,22 +229,12 @@ func clearSessionCookie(w http.ResponseWriter) {
 	})
 }
 
-func getAuthenticatedUserID(r *http.Request) (int, error) {
-	if cookie, err := r.Cookie(sessionCookieName); err == nil {
-		id, convErr := strconv.Atoi(cookie.Value)
-		if convErr == nil && id > 0 {
-			return id, nil
-		}
+func getAuthenticatedUserID(r *http.Request, db *sql.DB) (int, error) {
+	cookie, err := r.Cookie("footix_session")
+	if err != nil {
+		return 0, errors.New("cookie manquant")
 	}
-
-	if header := strings.TrimSpace(r.Header.Get("X-User-ID")); header != "" {
-		id, err := strconv.Atoi(header)
-		if err == nil && id > 0 {
-			return id, nil
-		}
-	}
-
-	return 0, errors.New("utilisateur non authentifié")
+	return storage.ValidateSession(db, cookie.Value)
 }
 
 func normalizePredictionResult(value string) (string, error) {
@@ -335,7 +331,7 @@ func getStatsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func profileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	userID, err := getAuthenticatedUserID(r)
+	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
 		writeError(w, r, http.StatusUnauthorized, "Utilisateur non connecté")
 		return
@@ -355,7 +351,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func myPredictionsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	userID, err := getAuthenticatedUserID(r)
+	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
 		writeError(w, r, http.StatusUnauthorized, "Utilisateur non connecté")
 		return
@@ -498,7 +494,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	setSessionCookie(w, user.Id)
+	setSessionCookie(w, db, user.Id)
 	writeJSON(w, r, http.StatusOK, map[string]any{
 		"message": "Connexion réussie",
 		"user": map[string]any{
@@ -531,7 +527,7 @@ func signupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 		return
 	}
 
-	setSessionCookie(w, user.ID)
+	setSessionCookie(w, db, user.ID)
 	writeJSON(w, r, http.StatusCreated, map[string]any{
 		"message": "Compte créé",
 		"user":    user,
@@ -540,12 +536,12 @@ func signupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 
 func logoutHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	_ = db
-	clearSessionCookie(w)
+	clearSessionCookie(w, r, db)
 	writeJSON(w, r, http.StatusOK, map[string]string{"message": "Déconnexion réussie"})
 }
 
 func updateProfileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	userID, err := getAuthenticatedUserID(r)
+	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
 		writeError(w, r, http.StatusUnauthorized, "Utilisateur non connecté")
 		return
@@ -578,7 +574,7 @@ func updateProfileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 }
 
 func submitPredictionHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	userID, err := getAuthenticatedUserID(r)
+	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
 		writeError(w, r, http.StatusUnauthorized, "Utilisateur non connecté")
 		return
@@ -623,7 +619,7 @@ func submitPredictionHandler(w http.ResponseWriter, r *http.Request, db *sql.DB)
 }
 
 func submitFeedbackHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
-	userID, err := getAuthenticatedUserID(r)
+	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
 		writeError(w, r, http.StatusUnauthorized, "Utilisateur non connecté")
 		return

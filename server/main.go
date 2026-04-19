@@ -44,6 +44,13 @@ func main() {
 		log.Printf("Impossible de charger le token : %v\n", err)
 	}
 
+	// Setup de la routine de suppression des userSessions expirés
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+	for range ticker.C {
+		_, _ = db.Exec(`DELETE FROM UserSessions WHERE expires_at < now()`)
+	}
+
 	// Population de la base de données
 	// Liste des codes de ligues autorisés dans le Free Plan de football-data.org
 	leagues := []string{"FL1", "PL", "SA", "BL1", "PD", "ELC", "CL", "EC", "DED", "PPL", "BSA", "CLI"}

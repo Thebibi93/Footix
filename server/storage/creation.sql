@@ -9,6 +9,7 @@ DROP TABLE IF EXISTS Users CASCADE;
 DROP TABLE IF EXISTS ChatMessages CASCADE;
 DROP TABLE IF EXISTS ChatRoomCounters CASCADE;
 DROP TABLE IF EXISTS ChatRooms CASCADE;
+DROP TABLE IF EXISTS UserSessions CASCADE;
 DROP TRIGGER IF EXISTS trg_init_chat_room_counter ON ChatRooms;
 DROP FUNCTION IF EXISTS init_chat_room_counter();
 
@@ -128,6 +129,14 @@ CREATE TABLE IF NOT EXISTS ChatMessages (
 
     CONSTRAINT uq_chatmessages_room_seq
         UNIQUE (chat_room_id, seq_in_room)
+);
+
+CREATE TABLE IF NOT EXISTS UserSessions (
+    token      TEXT PRIMARY KEY,
+    user_id    INT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
 );
 
 -- Index principal pour le rattrapage incrémental :
