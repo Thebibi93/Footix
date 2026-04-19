@@ -53,7 +53,7 @@ func InitDB() (*sql.DB, error) {
 	}
 
 	// Création de la chaîne de connexion (DSN) <=> data source name
-	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable",
+	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=require",
 		config.DBHost, config.DBUser, config.DBPassword, config.DBName)
 
 	// sql.Open ne crée pas de connexion immédiate, il vérifie juste les arguments
