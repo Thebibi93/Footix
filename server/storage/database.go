@@ -4,15 +4,15 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
-	"bufio"
-	"strings"
+
 	_ "github.com/lib/pq" // L'underscore est crucial : on importe le driver pour ses effets de bord (init)
 )
+
 /*
 	On encapsule la base de données dans une structure pour pouvoir lui attacher des méthodes.
 */
 
-// Config stocke nos paramètres du fichier properties.txt
+// Config stocke nos paramètres du fichier env
 type Config struct {
 	DBName     string
 	DBUser     string
@@ -21,9 +21,33 @@ type Config struct {
 	APIToken   string // token de l'API football-data.org
 }
 
+func LoadConfig() (Config, error) {
+	cfg := Config{
+		DBName:     getEnv("DB_NAME", ""),
+		DBUser:     getEnv("DB_USER", ""),
+		DBPassword: getEnv("DB_PASSWORD", ""),
+		DBHost:     getEnv("DB_HOST", "localhost"),
+		APIToken:   getEnv("API_TOKEN", ""),
+	}
+
+	if cfg.DBName == "" || cfg.DBUser == "" || cfg.DBPassword == "" || cfg.APIToken == "" {
+		return cfg, fmt.Errorf("configuration incomplète : DB_NAME, DB_USER, DB_PASSWORD et API_TOKEN sont requis")
+	}
+
+	return cfg, nil
+}
+
+// getEnv récupère une variable d'environnement avec une valeur par défaut
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 // InitDB charge la config et ouvre la connexion
 func InitDB() (*sql.DB, error) {
-	config, err := LoadProperties("resources/properties.txt")
+	config, err := LoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -46,32 +70,4 @@ func InitDB() (*sql.DB, error) {
 	}
 
 	return db, nil
-}
-
-// On parse les porprietées externalisées depuis le fichier resources/properties.txt
-func LoadProperties(filename string) (Config, error) {
-	var config Config
-	file, err := os.Open(filename)
-	if err != nil {
-		return config, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		parts := strings.Split(line, "=")
-		if len(parts) != 2 {
-			continue
-		}
-		key, value := parts[0], parts[1]
-		switch key {
-			case "db_name": config.DBName = value
-			case "db_user": config.DBUser = value
-			case "db_password": config.DBPassword = value
-			case "db_host": config.DBHost = value
-			case "token": config.APIToken = value 
-		}
-	}
-	return config, scanner.Err()
 }
