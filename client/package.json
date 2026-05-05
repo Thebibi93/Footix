@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "clean": "rm -rf .cache .tmp lib build"
   },
   "dependencies": {
     "@mantine/core": "^9.0.0",
