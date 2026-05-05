@@ -13,14 +13,14 @@ import {
 } from "@mantine/core";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useSimulatedApi } from "../hooks/UseApi";
+import { useApi } from "../hooks/UseApi";
 
 const MotionCard = motion.create(Card);
 
 export default function Leagues() {
   const [leagues, setLeagues] = useState([]);
   const [error, setError] = useState("");
-  const { getLeagues, loading } = useSimulatedApi();
+  const { getLeagues, loading } = useApi();
 
   useEffect(() => {
     let active = true;

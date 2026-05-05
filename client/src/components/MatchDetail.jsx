@@ -18,7 +18,7 @@ import {
   UnstyledButton,
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
-import { useSimulatedApi } from "../hooks/UseApi";
+import { useApi } from "../hooks/UseApi";
 import { useAuth } from "../contexts/AuthContext";
 import MatchChat from "./MatchChat";
 
@@ -64,7 +64,7 @@ export default function MatchDetail() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const { getMatchDetails, getUserPredictions, addPrediction, loading } = useSimulatedApi();
+  const { getMatchDetails, getUserPredictions, addPrediction, loading } = useApi();
   const { user } = useAuth();
   const navigate = useNavigate();
 

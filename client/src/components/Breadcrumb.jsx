@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Anchor, Breadcrumbs as MantineBreadcrumbs, Text } from "@mantine/core";
 import { Link, useLocation } from "react-router-dom";
-import { useSimulatedApi } from "../hooks/UseApi";
+import { useApi } from "../hooks/UseApi";
 
 export default function Breadcrumb() {
   const location = useLocation();
   const [breadcrumbs, setBreadcrumbs] = useState([]);
-  const { getLeagues, getMatchDetails } = useSimulatedApi();
+  const { getLeagues, getMatchDetails } = useApi();
 
   useEffect(() => {
     let active = true;

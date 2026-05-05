@@ -14,12 +14,12 @@ import {
   Title,
 } from "@mantine/core";
 import { useAuth } from "../contexts/AuthContext";
-import { useSimulatedApi } from "../hooks/UseApi";
+import { useApi } from "../hooks/UseApi";
 import PredictionHistory from "./PredictionHistory";
 
 export default function Profile() {
   const { user, loading: authLoading } = useAuth();
-  const { getProfileSummary, getLeaderboard, loading } = useSimulatedApi();
+  const { getProfileSummary, getLeaderboard, loading } = useApi();
   const [profile, setProfile] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [error, setError] = useState("");

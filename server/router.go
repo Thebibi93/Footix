@@ -290,8 +290,9 @@ func getMatchesHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 
 	bucket := strings.TrimSpace(r.URL.Query().Get("bucket"))
-	if bucket == "" {
-		bucket = "upcoming"
+	if bucket != "upcoming" && bucket != "past" {
+		writeError(w, r, http.StatusBadRequest, "Le paramètre 'bucket' doit être à upcoming ou past ")
+		return
 	}
 
 	page := 1

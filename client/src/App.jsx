@@ -44,9 +44,6 @@ function Home() {
     <Stack gap="xl">
       <Paper className="glass-panel hero-panel" p={{ base: "xl", md: "2rem" }}>
         <Stack gap="lg">
-          <Badge variant="light" color="cyan" className="section-label" w="fit-content">
-            Expérience football futuriste
-          </Badge>
 
           <Stack gap={6} maw={760}>
             <Title order={1} fz={{ base: 34, md: 54 }} lh={1.02}>

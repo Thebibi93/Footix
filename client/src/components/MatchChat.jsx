@@ -15,7 +15,7 @@ import {
   TextInput,
   Title,
 } from "@mantine/core";
-import { useSimulatedApi } from "../hooks/UseApi";
+import { useApi } from "../hooks/UseApi";
 import { useAuth } from "../contexts/AuthContext";
 
 function initials(name) {
@@ -36,7 +36,7 @@ export default function MatchChat({ matchId, matchTitle }) {
   const [selectedUserProfile, setSelectedUserProfile] = useState(null);
   const [profileOpened, setProfileOpened] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
-  const { getChatMessages, sendChatMessage, getUserProfile } = useSimulatedApi();
+  const { getChatMessages, sendChatMessage, getUserProfile } = useApi();
   const { user } = useAuth();
 
   const lastSeq = useMemo(
