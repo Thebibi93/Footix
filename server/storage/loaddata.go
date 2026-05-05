@@ -283,7 +283,7 @@ func GetMatchesPageByLeague(db *sql.DB, leagueCode, bucket string, page, pageSiz
         JOIN Teams t1 ON m.home_team_id = t1.id
         JOIN Teams t2 ON m.away_team_id = t2.id
         WHERE l.code = $1 AND %s
-        ORDER BY m.utc_date DESC
+        ORDER BY m.utc_date ASC
         LIMIT $2 OFFSET $3`, clause)
 
 	rows, err := db.Query(dataQuery, leagueCode, pageSize, offset)
