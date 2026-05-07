@@ -17,6 +17,7 @@ import {
 import { useParams, Link } from "react-router-dom";
 import { useApi } from "../hooks/UseApi";
 
+// formatMatchDate affiche une date de match dans un format court et lisible.
 function formatMatchDate(date) {
   return new Date(date).toLocaleString("fr-FR", {
     weekday: "short",
@@ -28,6 +29,7 @@ function formatMatchDate(date) {
   });
 }
 
+// statusLabel convertit l’état technique du match en libellé utilisateur.
 function statusLabel(match) {
   if (match.isFinished) {
     return "Terminé";
@@ -38,6 +40,7 @@ function statusLabel(match) {
   return "À venir";
 }
 
+// MatchList affiche les matchs d’une ligue avec pagination et filtre à venir/passé.
 export default function MatchList() {
   const { leagueId } = useParams();
   const [league, setLeague] = useState(null);

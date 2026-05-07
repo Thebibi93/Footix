@@ -6,6 +6,7 @@ const matchesCache = new Map();
 const matchDetailsCache = new Map();
 const profileCache = new Map();
 
+// splitRecentForm convertit une série de résultats en liste exploitable par l’UI.
 function splitRecentForm(value) {
   if (!value) {
     return [];
@@ -16,6 +17,7 @@ function splitRecentForm(value) {
     .filter(Boolean);
 }
 
+// normalizePredictionValue convertit les formats de pronostic vers les valeurs internes.
 function normalizePredictionValue(value) {
   switch (String(value || "").trim().toUpperCase()) {
     case "1":
@@ -38,6 +40,7 @@ function normalizePredictionValue(value) {
   }
 }
 
+// formatPredictionLabel transforme une valeur de pronostic en libellé utilisateur.
 function formatPredictionLabel(value) {
   switch (normalizePredictionValue(value)) {
     case "HOME_WIN":
@@ -51,6 +54,7 @@ function formatPredictionLabel(value) {
   }
 }
 
+// formatDateTime formate une date avec les options locales fournies.
 function formatDateTime(value, options = {}) {
   if (!value) {
     return "";
@@ -58,6 +62,7 @@ function formatDateTime(value, options = {}) {
   return new Date(value).toLocaleString("fr-FR", options);
 }
 
+// formatDate applique le format standard utilisé pour les dates affichées.
 function formatDate(value) {
   return formatDateTime(value, {
     day: "2-digit",
@@ -68,6 +73,7 @@ function formatDate(value) {
   });
 }
 
+// isPastMatch indique si une rencontre doit être considérée comme terminée.
 function isPastMatch(rawMatch) {
   const status = String(rawMatch?.status || "").toUpperCase();
   if (status === "FINISHED") {
@@ -79,6 +85,7 @@ function isPastMatch(rawMatch) {
   return new Date(rawMatch.utcDate).getTime() < Date.now() - 3 * 60 * 60 * 1000;
 }
 
+// isStartedMatch indique si le coup d’envoi théorique est déjà passé.
 function isStartedMatch(rawMatch) {
   if (!rawMatch?.utcDate) {
     return false;
@@ -86,6 +93,7 @@ function isStartedMatch(rawMatch) {
   return new Date(rawMatch.utcDate).getTime() <= Date.now();
 }
 
+// mapLeague réduit une ligue brute aux champs utiles côté front.
 function mapLeague(rawLeague) {
   return {
     id: rawLeague.id,
@@ -94,6 +102,7 @@ function mapLeague(rawLeague) {
   };
 }
 
+// mapMatch convertit un match brut en modèle d’affichage complet.
 function mapMatch(rawMatch, fallbackLeague) {
   const finished = isPastMatch(rawMatch);
   const started = isStartedMatch(rawMatch);
@@ -127,6 +136,7 @@ function mapMatch(rawMatch, fallbackLeague) {
   };
 }
 
+// mapChatMessage adapte un message brut du serveur au format du chat.
 function mapChatMessage(rawMessage) {
   return {
     id: rawMessage.id,
@@ -141,6 +151,7 @@ function mapChatMessage(rawMessage) {
   };
 }
 
+// mapProfile normalise un profil utilisateur reçu de l’API.
 function mapProfile(rawProfile) {
   if (!rawProfile) {
     return null;
@@ -159,6 +170,7 @@ function mapProfile(rawProfile) {
   };
 }
 
+// apiFetch exécute une requête HTTP vers le backend et gère les erreurs JSON.
 async function apiFetch(path, options = {}) {
   const headers = new Headers(options.headers || {});
   const isJsonBody =
@@ -192,6 +204,7 @@ async function apiFetch(path, options = {}) {
   return data;
 }
 
+// ensureLeagues charge les ligues une seule fois puis réutilise le cache.
 async function ensureLeagues() {
   if (leaguesCache) {
     return leaguesCache;
@@ -201,13 +214,16 @@ async function ensureLeagues() {
   return leaguesCache;
 }
 
+// matchesCacheKey construit la clé de cache d’une page de matchs.
 function matchesCacheKey(leagueCode, bucket, page, pageSize) {
   return `${leagueCode}:${bucket}:${page}:${pageSize}`;
 }
 
+// useApi regroupe les appels métier consommés par les composants React.
 export const useApi = () => {
   const [loading, setLoading] = useState(false);
 
+  // withLoading active l’état de chargement pendant une opération asynchrone.
   const withLoading = useCallback(async (fn) => {
     setLoading(true);
     try {
@@ -217,8 +233,10 @@ export const useApi = () => {
     }
   }, []);
 
+  // getLeagues retourne la liste des compétitions depuis le cache ou l’API.
   const getLeagues = useCallback(async () => withLoading(ensureLeagues), [withLoading]);
 
+  // getMatchesByLeague récupère une page de matchs pour une ligue et un filtre donné.
   const getMatchesByLeague = useCallback(async (leagueId, options = {}) => {
     return withLoading(async () => {
       const bucket = options.bucket || "upcoming";
@@ -258,6 +276,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // getMatchDetails récupère un match puis enrichit ses statistiques de prédiction.
   const getMatchDetails = useCallback(async (matchId) => {
     return withLoading(async () => {
       const rawMatch = await apiFetch(`/api/matches?matchId=${encodeURIComponent(matchId)}`, {
@@ -297,6 +316,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // getProfileSummary charge le profil complet de l’utilisateur connecté.
   const getProfileSummary = useCallback(async () => {
     return withLoading(async () => {
       const data = await apiFetch("/api/profile", { method: "GET" });
@@ -308,6 +328,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // getUserProfile récupère le profil public d’un utilisateur, avec cache local.
   const getUserProfile = useCallback(async (userId) => {
     return withLoading(async () => {
       const cached = profileCache.get(String(userId));
@@ -323,6 +344,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // getLeaderboard charge le classement global des utilisateurs.
   const getLeaderboard = useCallback(async () => {
     return withLoading(async () => {
       const data = await apiFetch("/api/scores", { method: "GET" });
@@ -330,6 +352,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // getUserPredictions récupère et formate l’historique des pronostics.
   const getUserPredictions = useCallback(async () => {
     return withLoading(async () => {
       const data = await apiFetch("/api/my-predictions", { method: "GET" });
@@ -361,6 +384,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // addPrediction envoie un pronostic normalisé au backend.
   const addPrediction = useCallback(async (matchId, predictedResult) => {
     return withLoading(async () => {
       const normalized = normalizePredictionValue(predictedResult);
@@ -374,6 +398,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // getChatMessages charge les messages d’un salon de match.
   const getChatMessages = useCallback(async (matchId, afterSeq = 0, limit = 100) => {
     return withLoading(async () => {
       const data = await apiFetch(
@@ -387,6 +412,7 @@ export const useApi = () => {
     });
   }, [withLoading]);
 
+  // sendChatMessage publie un message dans le salon d’un match.
   const sendChatMessage = useCallback(async (matchId, message) => {
     return withLoading(async () => {
       const created = await apiFetch("/api/feedback", {

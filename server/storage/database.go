@@ -21,6 +21,7 @@ type Config struct {
 	APIToken   string // token de l'API football-data.org
 }
 
+// LoadConfig lit les paramètres nécessaires au backend depuis les variables d’environnement.
 func LoadConfig() (Config, error) {
 	cfg := Config{
 		DBName:     getEnv("DB_NAME", ""),

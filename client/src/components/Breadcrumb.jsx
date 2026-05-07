@@ -3,6 +3,7 @@ import { Anchor, Breadcrumbs as MantineBreadcrumbs, Text } from "@mantine/core";
 import { Link, useLocation } from "react-router-dom";
 import { useApi } from "../hooks/UseApi";
 
+// Breadcrumb reconstruit le fil d’Ariane à partir de l’URL courante.
 export default function Breadcrumb() {
   const location = useLocation();
   const [breadcrumbs, setBreadcrumbs] = useState([]);
@@ -11,6 +12,7 @@ export default function Breadcrumb() {
   useEffect(() => {
     let active = true;
 
+    // buildBreadcrumbs transforme les segments de route en intitulés lisibles.
     const buildBreadcrumbs = async () => {
       const pathSegments = location.pathname.split("/").filter(Boolean);
       const crumbs = [{ name: "Accueil", path: "/" }];

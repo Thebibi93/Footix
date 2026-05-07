@@ -22,6 +22,7 @@ import { useApi } from "../hooks/UseApi";
 import { useAuth } from "../contexts/AuthContext";
 import MatchChat from "./MatchChat";
 
+// getFormColor associe un résultat récent à une couleur d’affichage.
 function getFormColor(result) {
   if (result === "W") {
     return "green";
@@ -32,6 +33,7 @@ function getFormColor(result) {
   return "red";
 }
 
+// formatMatchDate formate la date d’un match pour l’interface française.
 function formatMatchDate(date) {
   return new Date(date).toLocaleString("fr-FR", {
     weekday: "long",
@@ -43,6 +45,7 @@ function formatMatchDate(date) {
   });
 }
 
+// getResultCopy produit le texte de verdict d’un match terminé.
 function getResultCopy(match) {
   if (!match.isFinished) {
     return "Rencontre ouverte";
@@ -56,6 +59,7 @@ function getResultCopy(match) {
   return "Match nul";
 }
 
+// MatchDetail affiche les infos d’un match, ses statistiques, le pronostic et le chat.
 export default function MatchDetail() {
   const { matchId } = useParams();
   const [match, setMatch] = useState(null);
@@ -191,6 +195,7 @@ export default function MatchDetail() {
     return selected ? `${selected.shortLabel} · ${selected.title}` : "";
   }, [prediction, predictionOptions]);
 
+  // handlePredict enregistre ou met à jour le pronostic de l’utilisateur connecté.
   const handlePredict = async () => {
     if (!user) {
       navigate("/login");
@@ -271,7 +276,6 @@ export default function MatchDetail() {
             <Stack gap="md">
               <Group justify="space-between">
                 <Title order={3}>Lecture du match</Title>
-                <Badge variant="outline" color="cyan">IA simple</Badge>
               </Group>
 
               {probabilityCards.map((item) => (

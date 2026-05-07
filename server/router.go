@@ -1,3 +1,7 @@
+/*
+Ce fichier centralise les endpoints HTTP de Footix.
+Les handlers appellent la couche storage et répondent en JSON au client React.
+*/
 package main
 
 import (
@@ -13,7 +17,9 @@ import (
 	"time"
 )
 
+// RegisterRoutes configure tous les points d’entrée HTTP de l’API Footix.
 func RegisterRoutes(db *sql.DB) {
+	// Usage : GET /api/profile lit le profil connecté ; POST /api/profile le met à jour.
 	registerJSONRoute("/api/profile", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -25,6 +31,7 @@ func RegisterRoutes(db *sql.DB) {
 		}
 	})
 
+	// Usage : GET /api/my-predictions renvoie les pronostics de l’utilisateur connecté.
 	registerJSONRoute("/api/my-predictions", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -33,6 +40,7 @@ func RegisterRoutes(db *sql.DB) {
 		myPredictionsHandler(w, r, db)
 	})
 
+	// Usage : GET /api/users liste les utilisateurs ; ?userId=123 lit un profil public précis.
 	registerJSONRoute("/api/users", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -45,6 +53,7 @@ func RegisterRoutes(db *sql.DB) {
 		getUsersHandler(w, r, db)
 	})
 
+	// Usage : GET /api/leagues renvoie les compétitions disponibles.
 	registerJSONRoute("/api/leagues", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -53,6 +62,7 @@ func RegisterRoutes(db *sql.DB) {
 		getLeaguesHandler(w, r, db)
 	})
 
+	// Usage : GET /api/matches filtre les matchs par ligue ou récupère un match par ID.
 	registerJSONRoute("/api/matches", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -61,6 +71,7 @@ func RegisterRoutes(db *sql.DB) {
 		getMatchesHandler(w, r, db)
 	})
 
+	// Usage : GET /api/stats?matchId=123 calcule les statistiques d’un match.
 	registerJSONRoute("/api/stats", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -69,6 +80,7 @@ func RegisterRoutes(db *sql.DB) {
 		getStatsHandler(w, r, db)
 	})
 
+	// Usage : GET /api/scores lit le classement ; POST /api/scores recalcule les scores.
 	registerJSONRoute("/api/scores", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -80,6 +92,7 @@ func RegisterRoutes(db *sql.DB) {
 		}
 	})
 
+	// Usage : GET /api/feedbacks lit les messages par match, utilisateur ou séquence.
 	registerJSONRoute("/api/feedbacks", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -88,6 +101,7 @@ func RegisterRoutes(db *sql.DB) {
 		getFeedbacksHandler(w, r, db)
 	})
 
+	// Usage : POST /api/login connecte un utilisateur avec pseudo/email et mot de passe.
 	registerJSONRoute("/api/login", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -96,6 +110,7 @@ func RegisterRoutes(db *sql.DB) {
 		loginHandler(w, r, db)
 	})
 
+	// Usage : POST /api/signup crée un compte utilisateur.
 	registerJSONRoute("/api/signup", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -104,6 +119,7 @@ func RegisterRoutes(db *sql.DB) {
 		signupHandler(w, r, db)
 	})
 
+	// Usage : POST /api/logout ferme la session courante.
 	registerJSONRoute("/api/logout", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -112,6 +128,7 @@ func RegisterRoutes(db *sql.DB) {
 		logoutHandler(w, r, db)
 	})
 
+	// Usage : POST /api/update-profile met à jour explicitement le profil connecté.
 	registerJSONRoute("/api/update-profile", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -120,6 +137,7 @@ func RegisterRoutes(db *sql.DB) {
 		updateProfileHandler(w, r, db)
 	})
 
+	// Usage : POST /api/predict soumet ou remplace un pronostic.
 	registerJSONRoute("/api/predict", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -128,6 +146,7 @@ func RegisterRoutes(db *sql.DB) {
 		submitPredictionHandler(w, r, db)
 	})
 
+	// Usage : POST /api/feedback ajoute un message dans le chat d’un match.
 	registerJSONRoute("/api/feedback", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			writeError(w, r, http.StatusMethodNotAllowed, "Méthode non autorisée")
@@ -137,6 +156,7 @@ func RegisterRoutes(db *sql.DB) {
 	})
 }
 
+// registerJSONRoute ajoute une route JSON avec gestion CORS et pré-requête OPTIONS.
 func registerJSONRoute(pattern string, handler func(http.ResponseWriter, *http.Request)) {
 	http.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		if handlePreflight(w, r) {
@@ -146,6 +166,7 @@ func registerJSONRoute(pattern string, handler func(http.ResponseWriter, *http.R
 	})
 }
 
+// setCommonHeaders applique les en-têtes CORS et JSON communs à toutes les réponses.
 func setCommonHeaders(w http.ResponseWriter, r *http.Request) {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
@@ -159,6 +180,7 @@ func setCommonHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 }
 
+// handlePreflight intercepte les requêtes OPTIONS envoyées par le navigateur.
 func handlePreflight(w http.ResponseWriter, r *http.Request) bool {
 	setCommonHeaders(w, r)
 	if r.Method == http.MethodOptions {
@@ -168,16 +190,19 @@ func handlePreflight(w http.ResponseWriter, r *http.Request) bool {
 	return false
 }
 
+// writeJSON sérialise une réponse JSON avec le statut HTTP demandé.
 func writeJSON(w http.ResponseWriter, r *http.Request, status int, payload any) {
 	setCommonHeaders(w, r)
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(payload)
 }
 
+// writeError renvoie une erreur JSON homogène au client React.
 func writeError(w http.ResponseWriter, r *http.Request, status int, message string) {
 	writeJSON(w, r, status, map[string]string{"error": message})
 }
 
+// decodeJSONBody lit le corps JSON d’une requête et refuse les champs inconnus.
 func decodeJSONBody(r *http.Request, dst any) error {
 	defer r.Body.Close()
 	dec := json.NewDecoder(r.Body)
@@ -185,11 +210,13 @@ func decodeJSONBody(r *http.Request, dst any) error {
 	return dec.Decode(dst)
 }
 
+// hashPassword calcule le hash SHA-256 utilisé pour stocker ou vérifier un mot de passe.
 func hashPassword(password string) string {
 	sum := sha256.Sum256([]byte(password))
 	return hex.EncodeToString(sum[:])
 }
 
+// passwordMatches compare un mot de passe en clair avec la valeur stockée.
 func passwordMatches(storedValue, plainPassword string) bool {
 	if storedValue == "" {
 		return false
@@ -198,6 +225,7 @@ func passwordMatches(storedValue, plainPassword string) bool {
 	return storedValue == candidate || storedValue == plainPassword
 }
 
+// setSessionCookie crée une session persistée en base puis pose le cookie HTTP.
 func setSessionCookie(w http.ResponseWriter, db *sql.DB, userID int) error {
 	token, err := storage.CreateSession(db, userID)
 	if err != nil {
@@ -214,6 +242,7 @@ func setSessionCookie(w http.ResponseWriter, db *sql.DB, userID int) error {
 	return nil
 }
 
+// clearSessionCookie supprime la session serveur puis invalide le cookie côté client.
 func clearSessionCookie(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if cookie, err := r.Cookie("footix_session"); err == nil {
 		storage.DeleteSession(db, cookie.Value)
@@ -229,6 +258,7 @@ func clearSessionCookie(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	})
 }
 
+// getAuthenticatedUserID récupère l’utilisateur courant depuis le cookie ou le header de test.
 func getAuthenticatedUserID(r *http.Request, db *sql.DB) (int, error) {
 	cookie, err := r.Cookie("footix_session")
 	if err != nil {
@@ -237,6 +267,7 @@ func getAuthenticatedUserID(r *http.Request, db *sql.DB) (int, error) {
 	return storage.ValidateSession(db, cookie.Value)
 }
 
+// normalizePredictionResult convertit les saisies possibles vers les valeurs de pronostic internes.
 func normalizePredictionResult(value string) (string, error) {
 	switch strings.ToUpper(strings.TrimSpace(value)) {
 	case "1", "HOME", "HOME_WIN", "HOMEWIN", "DOMICILE":
@@ -250,6 +281,7 @@ func normalizePredictionResult(value string) (string, error) {
 	}
 }
 
+// getLeaguesHandler renvoie la liste des compétitions disponibles.
 func getLeaguesHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	leagues, err := storage.GetLeagues(db)
 	if err != nil {
@@ -259,6 +291,7 @@ func getLeaguesHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, leagues)
 }
 
+// getMatchesHandler renvoie soit un match précis, soit une page de matchs filtrés par ligue.
 func getMatchesHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if matchIDStr := strings.TrimSpace(r.URL.Query().Get("matchId")); matchIDStr != "" {
 		matchID, err := strconv.Atoi(matchIDStr)
@@ -314,6 +347,7 @@ func getMatchesHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, response)
 }
 
+// getStatsHandler calcule les probabilités et formes récentes associées à un match.
 func getStatsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	matchID := strings.TrimSpace(r.URL.Query().Get("matchId"))
 	if matchID == "" {
@@ -330,6 +364,7 @@ func getStatsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, stats)
 }
 
+// profileHandler renvoie le profil complet de l’utilisateur connecté.
 func profileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
@@ -350,6 +385,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, user)
 }
 
+// myPredictionsHandler renvoie l’historique des pronostics de l’utilisateur connecté.
 func myPredictionsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
@@ -366,6 +402,7 @@ func myPredictionsHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, predictions)
 }
 
+// getUsersHandler renvoie les utilisateurs publics nécessaires au chat et au classement.
 func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	users, err := storage.ListUsers(db)
 	if err != nil {
@@ -375,6 +412,7 @@ func getUsersHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, users)
 }
 
+// getUserByIdHandler renvoie le profil public d’un utilisateur donné.
 func getUserByIdHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, err := strconv.Atoi(strings.TrimSpace(r.URL.Query().Get("userId")))
 	if err != nil || userID <= 0 {
@@ -395,6 +433,7 @@ func getUserByIdHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, user)
 }
 
+// getScoresHandler renvoie le classement des scores utilisateurs.
 func getScoresHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	leaderboard, err := storage.ListScores(db)
 	if err != nil {
@@ -404,6 +443,7 @@ func getScoresHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusOK, leaderboard)
 }
 
+// getFeedbacksHandler renvoie les messages d’un match ou d’un utilisateur.
 func getFeedbacksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	matchIDStr := strings.TrimSpace(r.URL.Query().Get("matchId"))
 	userIDStr := strings.TrimSpace(r.URL.Query().Get("userId"))
@@ -462,6 +502,7 @@ func getFeedbacksHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	}
 }
 
+// loginHandler authentifie un utilisateur et crée sa session.
 func loginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var payload storage.AuthPayload
 	if err := decodeJSONBody(r, &payload); err != nil {
@@ -505,6 +546,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	})
 }
 
+// signupHandler crée un utilisateur puis ouvre directement une session.
 func signupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	var payload storage.AuthPayload
 	if err := decodeJSONBody(r, &payload); err != nil {
@@ -534,12 +576,14 @@ func signupHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	})
 }
 
+// logoutHandler ferme la session courante et nettoie le cookie associé.
 func logoutHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	_ = db
 	clearSessionCookie(w, r, db)
 	writeJSON(w, r, http.StatusOK, map[string]string{"message": "Déconnexion réussie"})
 }
 
+// updateProfileHandler met à jour les informations du profil connecté.
 func updateProfileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
@@ -573,6 +617,7 @@ func updateProfileHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	})
 }
 
+// submitPredictionHandler valide et enregistre le pronostic envoyé par le client.
 func submitPredictionHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
@@ -618,6 +663,7 @@ func submitPredictionHandler(w http.ResponseWriter, r *http.Request, db *sql.DB)
 	})
 }
 
+// submitFeedbackHandler ajoute un message dans le chat d’un match.
 func submitFeedbackHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	userID, err := getAuthenticatedUserID(r, db)
 	if err != nil {
@@ -658,6 +704,7 @@ func submitFeedbackHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	writeJSON(w, r, http.StatusCreated, message)
 }
 
+// recalculateScoresHandler relance le calcul global des scores utilisateurs.
 func recalculateScoresHandler(w http.ResponseWriter, r *http.Request, db *sql.DB) {
 	if err := storage.RecalculateScores(db); err != nil {
 		writeError(w, r, http.StatusInternalServerError, "Erreur lors du recalcul des scores")

@@ -3,11 +3,13 @@ import { useMediaQuery } from "@mantine/hooks";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
+// Navbar affiche la navigation principale et les actions liées à la session.
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 36em)");
 
+  // handleLogout déconnecte l’utilisateur puis le redirige vers l’accueil.
   const handleLogout = async () => {
     await logout();
     navigate("/");

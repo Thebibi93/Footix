@@ -14,6 +14,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
+// Signup affiche le formulaire d’inscription et crée un nouveau compte utilisateur.
 export default function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,6 +24,7 @@ export default function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
+  // handleSubmit envoie les données d’inscription puis connecte le nouveau compte.
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");

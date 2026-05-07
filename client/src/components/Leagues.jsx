@@ -17,6 +17,7 @@ import { useApi } from "../hooks/UseApi";
 
 const MotionCard = motion.create(Card);
 
+// Leagues charge les compétitions disponibles et les affiche sous forme de cartes.
 export default function Leagues() {
   const [leagues, setLeagues] = useState([]);
   const [error, setError] = useState("");

@@ -18,11 +18,13 @@ type Message struct {
 	Text string `json:"text"`
 }
 
+// printCounter affiche un compteur puis temporise, utile pour tester une tâche longue.
 func printCounter(c int) {
 	fmt.Printf("Compteur : %d\n", c)
 	time.Sleep(20 * time.Second)
 }
 
+// main initialise la configuration, la base, la synchronisation API et le serveur HTTP.
 func main() {
 
 	fmt.Println("--- ⚽ Démarrage du serveur Footix ---")

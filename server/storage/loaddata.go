@@ -18,6 +18,7 @@ func SaveTeam(db *sql.DB, id int, name string, shortName string, crestURL string
 	return err
 }
 
+// SaveMatch insère ou met à jour un match avec ses équipes, son score et sa saison.
 func SaveMatch(db *sql.DB, leagueID int, season int, m MatchData) error {
 	query := `
         INSERT INTO Matches (id, league_id, season, utc_date, home_team_id, away_team_id, home_score, away_score, status)
@@ -67,6 +68,7 @@ func SaveLeague(db *sql.DB, id int, name string, code string) error {
 	return nil
 }
 
+// GetLeagues renvoie toutes les compétitions enregistrées en base.
 func GetLeagues(db *sql.DB) ([]League, error) {
 	rows, err := db.Query(`
 		SELECT id, name, code
@@ -120,6 +122,7 @@ func GetMatchStats(db *sql.DB, matchID string) (MatchStats, error) {
 	return stats, nil
 }
 
+// getTeamPoints calcule les points cumulés d’une équipe sur ses matchs terminés.
 func getTeamPoints(db *sql.DB, teamID int) float64 {
 	var points float64
 	query := `
@@ -137,6 +140,7 @@ func getTeamPoints(db *sql.DB, teamID int) float64 {
 	return points
 }
 
+// matchBucketClause produit le filtre SQL correspondant aux matchs passés ou à venir.
 func matchBucketClause(bucket string) string {
 	switch strings.ToLower(strings.TrimSpace(bucket)) {
 	case "past", "finished":
@@ -148,6 +152,7 @@ func matchBucketClause(bucket string) string {
 	}
 }
 
+// scanMatchRow convertit une ligne SQL en structure MatchData complète.
 func scanMatchRow(scanner interface{ Scan(dest ...any) error }) (MatchData, error) {
 	var m MatchData
 	var homeScore sql.NullInt64
@@ -186,6 +191,7 @@ func scanMatchRow(scanner interface{ Scan(dest ...any) error }) (MatchData, erro
 	return m, nil
 }
 
+// GetMatchByID récupère un match précis avec les informations des deux équipes.
 func GetMatchByID(db *sql.DB, matchID int) (MatchData, error) {
 	query := `
         SELECT
@@ -216,6 +222,7 @@ func GetMatchByID(db *sql.DB, matchID int) (MatchData, error) {
 	return scanMatchRow(row)
 }
 
+// GetMatchesPageByLeague renvoie une page de matchs pour une ligue et un filtre donnés.
 func GetMatchesPageByLeague(db *sql.DB, leagueCode, bucket string, page, pageSize int) (MatchListResponse, error) {
 	if page < 1 {
 		page = 1

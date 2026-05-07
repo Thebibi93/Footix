@@ -9,47 +9,12 @@ import (
 	"strings"
 )
 
-// CompetitionResponse représente les détails d'une ligue (ex: PL, FL1).
-type CompetitionResponse struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-	Code string `json:"code"`
-	Area struct {
-		Name string `json:"name"`
-	} `json:"area"`
-}
-
-// MatchesResponse est l'enveloppe pour la liste des matchs.
-type MatchesResponse struct {
-	Matches []MatchData `json:"matches"`
-}
-
-type League struct {
-	Id   int    `json:"id"`
-	Name string `json:"name"`
-	Code string `json:"code"`
-}
-
-// SeasonInfo doit supporter deux mondes :
-// - l'API football-data, où `season` est souvent un objet JSON
-// - notre base SQL, où `season` est stocké comme un entier
-//
-// Year sert au stockage / retour API interne.
-// Les autres champs servent uniquement à tolérer le payload externe.
-type SeasonInfo struct {
-	Year            int    `json:"-"`
-	ID              int    `json:"id,omitempty"`
-	StartDate       string `json:"startDate,omitempty"`
-	EndDate         string `json:"endDate,omitempty"`
-	CurrentMatchday int    `json:"currentMatchday,omitempty"`
-	Label           string `json:"-"`
-	Raw             string `json:"-"`
-}
-
+// hasObjectMetadata indique si la saison contient les métadonnées reçues de l’API externe.
 func (s SeasonInfo) hasObjectMetadata() bool {
 	return s.ID != 0 || s.StartDate != "" || s.EndDate != "" || s.CurrentMatchday != 0
 }
 
+// parseSeasonYear extrait une année exploitable depuis une valeur JSON hétérogène.
 func parseSeasonYear(text string) int {
 	text = strings.TrimSpace(text)
 	if text == "" {
@@ -66,6 +31,7 @@ func parseSeasonYear(text string) int {
 	return 0
 }
 
+// UnmarshalJSON accepte les saisons sous forme de nombre, chaîne ou objet API.
 func (s *SeasonInfo) UnmarshalJSON(data []byte) error {
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 || bytes.Equal(trimmed, []byte("null")) {
@@ -203,6 +169,45 @@ func (s SeasonInfo) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return int64(s.Year), nil
+}
+
+// On a toutes les définitions des données JSON converties pour être insérés en BDD
+
+// CompetitionResponse représente les détails d'une ligue (ex: PL, FL1).
+type CompetitionResponse struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+	Area struct {
+		Name string `json:"name"`
+	} `json:"area"`
+}
+
+// MatchesResponse est l'enveloppe pour la liste des matchs.
+type MatchesResponse struct {
+	Matches []MatchData `json:"matches"`
+}
+
+type League struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+}
+
+// SeasonInfo doit supporter deux mondes :
+// - l'API football-data, où `season` est souvent un objet JSON
+// - notre base SQL, où `season` est stocké comme un entier
+//
+// Year sert au stockage / retour API interne.
+// Les autres champs servent uniquement à tolérer le payload externe.
+type SeasonInfo struct {
+	Year            int    `json:"-"`
+	ID              int    `json:"id,omitempty"`
+	StartDate       string `json:"startDate,omitempty"`
+	EndDate         string `json:"endDate,omitempty"`
+	CurrentMatchday int    `json:"currentMatchday,omitempty"`
+	Label           string `json:"-"`
+	Raw             string `json:"-"`
 }
 
 // MatchData représente un match unique à insérer en base et à renvoyer au front.

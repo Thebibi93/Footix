@@ -29,7 +29,7 @@ const featureCards = [
   },
   {
     title: "Des pronostics palpitants",
-    description: "Ressentez l'adréaline d'un pari 100% Hallal.",
+    description: "Ressentez l'adréaline !",
     emoji: "🎯",
   },
   {
@@ -39,6 +39,7 @@ const featureCards = [
   },
 ];
 
+// Home affiche la page d’accueil avec les cartes de présentation et la liste des ligues.
 function Home() {
   return (
     <Stack gap="xl">
@@ -80,6 +81,7 @@ function Home() {
   );
 }
 
+// AppContent construit le layout principal et branche les routes React de l’application.
 function AppContent() {
   const location = useLocation();
 
@@ -113,6 +115,7 @@ function AppContent() {
   );
 }
 
+// App encapsule l’application dans le contexte d’authentification global.
 function App() {
   return (
     <AuthProvider>

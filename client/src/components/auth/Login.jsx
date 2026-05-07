@@ -14,6 +14,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
+// Login affiche le formulaire de connexion et met à jour la session utilisateur.
 export default function Login() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -22,6 +23,7 @@ export default function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+  // handleSubmit soumet les identifiants puis redirige après connexion réussie.
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError("");

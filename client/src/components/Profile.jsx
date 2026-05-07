@@ -17,6 +17,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { useApi } from "../hooks/UseApi";
 import PredictionHistory from "./PredictionHistory";
 
+// Profile regroupe le résumé utilisateur, le classement et l’historique des pronostics.
 export default function Profile() {
   const { user, loading: authLoading } = useAuth();
   const { getProfileSummary, getLeaderboard, loading } = useApi();

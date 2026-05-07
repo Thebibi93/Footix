@@ -18,6 +18,7 @@ import {
 import { useApi } from "../hooks/UseApi";
 import { useAuth } from "../contexts/AuthContext";
 
+// initials extrait les initiales d’un pseudo pour les avatars du chat.
 function initials(name) {
   return String(name || "?")
     .split(" ")
@@ -27,6 +28,7 @@ function initials(name) {
     .join("");
 }
 
+// MatchChat affiche le salon d’un match et permet l’envoi de messages authentifiés.
 export default function MatchChat({ matchId, matchTitle }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
@@ -47,6 +49,7 @@ export default function MatchChat({ matchId, matchTitle }) {
   useEffect(() => {
     let active = true;
 
+    // loadInitialMessages récupère les premiers messages du match sélectionné.
     const loadInitialMessages = async () => {
       if (!matchId) {
         return;
@@ -108,6 +111,7 @@ export default function MatchChat({ matchId, matchTitle }) {
     return () => window.clearInterval(intervalId);
   }, [getChatMessages, lastSeq, matchId]);
 
+  // openUserProfile ouvre le profil public associé à un message du chat.
   const openUserProfile = async (userId) => {
     setProfileOpened(true);
     setProfileLoading(true);
@@ -121,6 +125,7 @@ export default function MatchChat({ matchId, matchTitle }) {
     }
   };
 
+  // handleSend valide puis envoie un nouveau message dans le salon du match.
   const handleSend = async () => {
     const value = newMessage.trim();
     if (!value || !user) {

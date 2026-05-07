@@ -68,6 +68,7 @@ func GetLeagueIDByCode(db *sql.DB, leagueCode string) (int, error) {
 	return id, nil
 }
 
+// getUserRank renvoie le rang de l'utilisateur à partir de son ID
 func getUserRank(db *sql.DB, userID int) (int, error) {
 	var rank int
 	err := db.QueryRow(`
@@ -85,6 +86,7 @@ func getUserRank(db *sql.DB, userID int) (int, error) {
 	return rank, nil
 }
 
+// getUserProfileSummary permet d'obtenir les infos du profil d'un utilisateur en incluant ou non son mail
 func getUserProfileSummary(db *sql.DB, userID int, includeEmail bool) (UserProfileSummary, error) {
 	var profile UserProfileSummary
 	var email sql.NullString
@@ -145,14 +147,17 @@ func getUserProfileSummary(db *sql.DB, userID int, includeEmail bool) (UserProfi
 	return profile, nil
 }
 
+// GetProfileByID renvoie le profil complet du compte connecté avec son email.
 func GetProfileByID(db *sql.DB, userID int) (UserProfileSummary, error) {
 	return getUserProfileSummary(db, userID, true)
 }
 
+// GetUserByID renvoie le profil public d’un utilisateur sans exposer son email.
 func GetUserByID(db *sql.DB, userID int) (UserProfileSummary, error) {
 	return getUserProfileSummary(db, userID, false)
 }
 
+// ListUsers fait une liste ordonnée des utilisateurs par nom
 func ListUsers(db *sql.DB) ([]PublicUser, error) {
 	rows, err := db.Query(`SELECT id, username FROM Users ORDER BY username ASC`)
 	if err != nil {
@@ -171,6 +176,7 @@ func ListUsers(db *sql.DB) ([]PublicUser, error) {
 	return users, rows.Err()
 }
 
+// GetUserByIdentifier retrouve un utilisateur par pseudo ou par email.
 func GetUserByIdentifier(db *sql.DB, identifier string) (User, error) {
 	var user User
 	err := db.QueryRow(`
@@ -184,6 +190,7 @@ func GetUserByIdentifier(db *sql.DB, identifier string) (User, error) {
 	return user, nil
 }
 
+// CreateUser insère un nouveau compte et initialise son score à zéro.
 func CreateUser(db *sql.DB, username, email, passwordHash string) (PublicUser, error) {
 	var user PublicUser
 	err := db.QueryRow(`
@@ -199,6 +206,7 @@ func CreateUser(db *sql.DB, username, email, passwordHash string) (PublicUser, e
 	return user, nil
 }
 
+// UpdateUserProfile applique les changements autorisés sur le profil utilisateur.
 func UpdateUserProfile(db *sql.DB, userID int, payload UpdateProfilePayload, passwordHashFunc func(string) string) (PublicUser, error) {
 	var currentUsername, currentEmail, currentPasswordHash string
 	err := db.QueryRow(`SELECT username, email, password_hash FROM Users WHERE id = $1`, userID).
@@ -232,6 +240,7 @@ func UpdateUserProfile(db *sql.DB, userID int, payload UpdateProfilePayload, pas
 	return PublicUser{ID: userID, Username: newUsername, Email: newEmail}, nil
 }
 
+// ListUserPredictionHistory renvoie les pronostics passés avec les infos de match.
 func ListUserPredictionHistory(db *sql.DB, userID int) ([]PredictionHistoryItem, error) {
 	query := `
         SELECT
@@ -279,6 +288,7 @@ func ListUserPredictionHistory(db *sql.DB, userID int) ([]PredictionHistoryItem,
 	return predictions, rows.Err()
 }
 
+// GetEnrichedMatchStats enrichit les probabilités d’un match avec la forme récente des équipes.
 func GetEnrichedMatchStats(db *sql.DB, matchID string) (MatchStats, error) {
 	stats, err := GetMatchStats(db, matchID)
 	if err != nil {
@@ -296,6 +306,7 @@ func GetEnrichedMatchStats(db *sql.DB, matchID string) (MatchStats, error) {
 	return stats, nil
 }
 
+// getLastResultsString résume les derniers résultats d’une équipe sous forme W/D/L.
 func getLastResultsString(db *sql.DB, teamID int, limit int) string {
 	query := `
         SELECT home_team_id, away_team_id, home_score, away_score
@@ -352,6 +363,7 @@ func getLastResultsString(db *sql.DB, teamID int, limit int) string {
 	return result
 }
 
+// ListScores renvoie le classement des utilisateurs trié par score.
 func ListScores(db *sql.DB) ([]ScoreEntry, error) {
 	query := `
         SELECT u.id, u.username, COALESCE(s.score, 0) AS score
@@ -376,6 +388,7 @@ func ListScores(db *sql.DB) ([]ScoreEntry, error) {
 	return leaderboard, rows.Err()
 }
 
+// SaveUserPrediction enregistre ou remplace le pronostic d’un utilisateur sur un match.
 func SaveUserPrediction(db *sql.DB, userID int, matchID int, predictedResult string) error {
 	var status string
 	var kickoff time.Time
@@ -411,6 +424,7 @@ func SaveUserPrediction(db *sql.DB, userID int, matchID int, predictedResult str
 	return err
 }
 
+// actualResultFromScores déduit le résultat final à partir des scores domicile/extérieur.
 func actualResultFromScores(homeScore, awayScore sql.NullInt64) string {
 	if !homeScore.Valid || !awayScore.Valid {
 		return ""
@@ -424,6 +438,7 @@ func actualResultFromScores(homeScore, awayScore sql.NullInt64) string {
 	return "DRAW"
 }
 
+// RecalculateScores recalcule les points à partir des pronostics et résultats terminés.
 func RecalculateScores(db *sql.DB) error {
 	_, err := db.Exec(`
         UPDATE UserPredictionHistory h
@@ -473,6 +488,7 @@ func RecalculateScores(db *sql.DB) error {
 	return nil
 }
 
+// GetOrCreateMainChatRoomIDByMatchID récupère ou crée le salon principal d’un match.
 func GetOrCreateMainChatRoomIDByMatchID(tx *sql.Tx, matchID int64) (int64, error) {
 	var roomID int64
 	err := tx.QueryRow(`SELECT id FROM ChatRooms WHERE match_id = $1 AND room_type = 'main'`, matchID).Scan(&roomID)
@@ -493,6 +509,7 @@ func GetOrCreateMainChatRoomIDByMatchID(tx *sql.Tx, matchID int64) (int64, error
 	return roomID, nil
 }
 
+// ListChatMessagesByMatchID liste les messages d’un salon de match avec pagination séquentielle.
 func ListChatMessagesByMatchID(db *sql.DB, matchID int64, afterSeq int64, limit int) ([]ChatMessage, error) {
 	rows, err := db.Query(`
         SELECT m.id, r.id, r.match_id, m.seq_in_room, m.user_id, u.username, m.message,
@@ -521,6 +538,7 @@ func ListChatMessagesByMatchID(db *sql.DB, matchID int64, afterSeq int64, limit 
 	return messages, rows.Err()
 }
 
+// ListChatMessagesByUserID liste les messages publics envoyés par un utilisateur.
 func ListChatMessagesByUserID(db *sql.DB, userID int64, limit int) ([]ChatMessage, error) {
 	rows, err := db.Query(`
         SELECT m.id, r.id, r.match_id, m.seq_in_room, m.user_id, u.username, m.message,
@@ -547,6 +565,7 @@ func ListChatMessagesByUserID(db *sql.DB, userID int64, limit int) ([]ChatMessag
 	return messages, rows.Err()
 }
 
+// CreateChatMessageByMatchID ajoute un message dans le salon principal d’un match.
 func CreateChatMessageByMatchID(db *sql.DB, matchID int64, userID int, message string) (ChatMessage, error) {
 	ctx := context.Background()
 

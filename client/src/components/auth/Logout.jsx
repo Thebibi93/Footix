@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
+// Logout déclenche la déconnexion côté client puis revient à l’accueil.
 export default function Logout() {
   const { logout } = useAuth();
   const navigate = useNavigate();

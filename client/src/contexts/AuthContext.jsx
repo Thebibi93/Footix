@@ -10,8 +10,10 @@ import {
 const AuthContext = createContext();
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
 
+// useAuth expose le contexte d’authentification aux composants React.
 export const useAuth = () => useContext(AuthContext);
 
+// authFetch centralise les appels authentifiés vers l’API Go.
 async function authFetch(path, options = {}) {
   const headers = new Headers(options.headers || {});
   const isJsonBody =
@@ -45,6 +47,7 @@ async function authFetch(path, options = {}) {
   return data;
 }
 
+// normalizeUser uniformise le profil reçu du serveur avant stockage côté client.
 function normalizeUser(rawUser) {
   if (!rawUser) {
     return null;
@@ -63,10 +66,12 @@ function normalizeUser(rawUser) {
   };
 }
 
+// AuthProvider maintient la session utilisateur et fournit les actions d’authentification.
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // refreshProfile recharge le profil courant depuis l’API.
   const refreshProfile = useCallback(async () => {
     try {
       const profile = await authFetch("/api/profile", { method: "GET" });
@@ -104,6 +109,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
+  // login authentifie l’utilisateur puis synchronise son profil local.
   const login = useCallback(async (identifier, password) => {
     await authFetch("/api/login", {
       method: "POST",
@@ -119,6 +125,7 @@ export const AuthProvider = ({ children }) => {
     return normalized;
   }, []);
 
+  // signup crée un compte puis synchronise le profil local.
   const signup = useCallback(async (username, email, password) => {
     await authFetch("/api/signup", {
       method: "POST",
@@ -135,6 +142,7 @@ export const AuthProvider = ({ children }) => {
     return normalized;
   }, []);
 
+  // logout ferme la session serveur puis nettoie l’état utilisateur local.
   const logout = useCallback(async () => {
     try {
       await authFetch("/api/logout", { method: "POST" });

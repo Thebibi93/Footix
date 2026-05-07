@@ -1,5 +1,5 @@
 // Package services gère la logique métier liée aux interactions avec les API externes.
-// Conformément aux contraintes du projet, il utilise exclusivement le package net/http[cite: 13].
+// Conformément aux contraintes du projet, il utilise exclusivement le package net/http.
 package services
 
 import (
@@ -38,11 +38,7 @@ import (
 
 // ======================= ======================== ===============
 
-// FetchAndSaveLeague contacte l'API externe pour récupérer les métadonnées d'une compétition.
-// Cette fonction répond à la contrainte de peupler la base de données via une API dynamique[cite: 19, 23].
-// Package services gère la logique métier liée aux interactions avec les API externes.
-// Conformément aux contraintes du projet, il utilise exclusivement le package net/http.
-
+// executeAPIRequest centralise l’appel GET vers l’API externe et le décodage JSON.
 func executeAPIRequest(token string, url string, target any) error {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
@@ -74,6 +70,7 @@ func executeAPIRequest(token string, url string, target any) error {
 }
 
 // FetchAndSaveLeague contacte l'API externe pour récupérer les métadonnées d'une compétition.
+// Cette fonction peuple ou met à jour la table des ligues depuis football-data.org.
 func FetchAndSaveLeague(db *sql.DB, token string, leagueCode string) error {
 	url := fmt.Sprintf("https://api.football-data.org/v4/competitions/%s", leagueCode)
 
@@ -86,6 +83,7 @@ func FetchAndSaveLeague(db *sql.DB, token string, leagueCode string) error {
 }
 
 // FetchAndSaveMatches récupère l'historique des matchs pour une saison précise.
+// Les données servent ensuite aux affichages et aux statistiques de prédiction.
 func FetchAndSaveMatches(db *sql.DB, token string, leagueCode string, season int) error {
 	leagueID, err := storage.GetLeagueIDByCode(db, leagueCode)
 	if err != nil {
@@ -118,9 +116,11 @@ func FetchAndSaveMatches(db *sql.DB, token string, leagueCode string, season int
 }
 
 // FetchApi lance une synchronisation périodique pour une ligue/saison.
+// Elle s’exécute immédiatement puis à intervalle régulier jusqu’à l’arrêt du contexte.
 func FetchApi(ctx context.Context, db *sql.DB, token string, leagues []string, season int, apiTasks chan APITask) {
 	const refreshInterval = 10 * time.Minute
 
+	// enqueueAll planifie les rafraîchissements de matchs pour toutes les ligues.
 	enqueueAll := func() {
 		fmt.Printf("Planification du rafraîchissement de la saison %d pour %d ligues\n", season, len(leagues))
 

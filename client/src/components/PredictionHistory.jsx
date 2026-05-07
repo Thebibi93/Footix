@@ -5,6 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 
 const PAGE_SIZE = 6;
 
+// getHistoryStatus détermine le statut visuel d’un pronostic dans l’historique.
 function getHistoryStatus(prediction) {
   if (!prediction.actualResult) {
     return {
@@ -29,6 +30,7 @@ function getHistoryStatus(prediction) {
   };
 }
 
+// PredictionHistory charge et affiche les pronostics passés de l’utilisateur.
 export default function PredictionHistory() {
   const [predictions, setPredictions] = useState([]);
   const [error, setError] = useState("");
